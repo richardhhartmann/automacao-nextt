@@ -25,12 +25,13 @@ else:
     try:
         df = pd.read_excel(caminho_arquivo)
         df.columns = df.columns.str.strip()
+        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Marcas", skiprows=5, header=None, usecols='A')
 
         print("Dados a serem importados:")
         print(df)
 
-        for index, row in df.iterrows():
-            marca = row['mar_codigo']
+        for x in range(len(df)):
+            marca = df.iloc[x, 0]
 
             print(f"Inserindo a marca: {marca}")
 
