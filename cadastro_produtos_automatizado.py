@@ -26,69 +26,133 @@ else:
     try:
         null_value = None
         df_teste = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos")
-        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos", skiprows=5, header=None, usecols="A:P")
-        df.columns = ["secao", "especie", "descricao", "descricao_reduzida", "marca", "referencia",
-                      "cod_original", "comprador", "ativo", "unidade", "classificacao", "origem",
-                      "venda", "icms", "ipi", "etiqueta"]
+        
+        # Lendo todas as colunas disponíveis
+        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos", skiprows=5, header=None)
+
+        # Verifique o número de colunas
+        print(f"Total de colunas lidas: {len(df.columns)}")
+        
+        # Ajuste automático das colunas
+        df.columns = [
+            "secao", "especie", "descricao", "descricao_reduzida", "marca", "referencia",
+            "cod_original", "comprador", "ativo", "unidade", "classificacao", "origem",
+            "venda", "icms", "ipi", "etiqueta", "coluna17", "coluna18", "coluna19", "coluna20",
+            "coluna21", "coluna22", "coluna23", "coluna24", "coluna25", "coluna26", "coluna27"
+        ] + [f"coluna{i}" for i in range(28, len(df.columns) + 1)]  # Adiciona colunas extras se houver
+
+        # Remover linhas vazias
         df = df.dropna(how='all')
 
-        df['secao'] = df['secao'].astype('Int64', errors='ignore').astype('object')
-        df['especie'] = df['especie'].astype('Int64', errors='ignore').astype('object')
-        df['cod_original'] = df['cod_original'].astype('Int64', errors='ignore').astype('object')
+        # Convertendo colunas para tipos corretos
+        df['secao'] = pd.to_numeric(df['secao'], errors='coerce').fillna(0).astype('int16')
+        df['especie'] = pd.to_numeric(df['especie'], errors='coerce').fillna(0).astype('int16')
+        df['cod_original'] = pd.to_numeric(df['cod_original'], errors='coerce').fillna(0).astype('int16')
         df['ativo'] = df['ativo'].astype('Int64', errors='ignore').astype('object')
-        df['unidade'] = df['unidade'].astype('Int64', errors='ignore').astype('object')
-        df['classificacao'] = df['classificacao'].astype('Int64', errors='ignore').astype('object')
-        df['venda'] = df['venda'].astype('float64', errors='ignore').astype('object')
-        df['icms'] = df['icms'].astype('float64', errors='ignore').astype('object')
-        df['ipi'] = df['ipi'].astype('float64', errors='ignore').astype('object')
-
+        df['unidade'] = pd.to_numeric(df['unidade'], errors='coerce').fillna(0).astype('int16')
+        df['classificacao'] = pd.to_numeric(df['classificacao'], errors='coerce').fillna(0).astype('int16')
+        df['venda'] = pd.to_numeric(df['venda'], errors='coerce').fillna(0).astype('int16')
+        df['origem'] = pd.to_numeric(df['origem'], errors='coerce').fillna(0).astype('int16')
+        df['icms'] = pd.to_numeric(df['icms'], errors='coerce').fillna(0).astype('int16')
+        df['ipi'] = pd.to_numeric(df['ipi'], errors='coerce').fillna(0).astype('int16')
+        df['coluna25'] = pd.to_numeric(df['coluna25'], errors='coerce').fillna(0).astype('int16')
+        df['coluna26'] = pd.to_numeric(df['coluna26'], errors='coerce').fillna(0).astype('int16')
+        df['coluna27'] = pd.to_numeric(df['coluna27'], errors='coerce').fillna(0).astype('int16')
+        df['coluna28'] = pd.to_numeric(df['coluna28'], errors='coerce').fillna(0).astype('int16')
+        df['coluna29'] = pd.to_numeric(df['coluna29'], errors='coerce').fillna(0).astype('int16')
+        df['coluna30'] = pd.to_numeric(df['coluna30'], errors='coerce').fillna(0).astype('int16')
+ 
         print("Dados a serem importados:")
-        print(df.head(10))
+        print(df.head(200))
+
+        duplicata = 0
+        total_itens = len(df)
 
         for x in range(len(df)):
-            secao = int(df.iloc[x, 0]) if pd.notna(df.iloc[x, 0]) else None
-            especie = int(df.iloc[x, 1]) if pd.notna(df.iloc[x, 1]) else None
+            # Certificando-se de que os índices existem antes de acessá-los
+            secao = int(df.iloc[x, 24]) if not pd.isna(df.iloc[x, 24]) else None
+            especie = int(df.iloc[x, 25]) if not pd.isna(df.iloc[x, 25]) else None
+
             descricao = str(df.iloc[x, 2])[:50] if pd.notna(df.iloc[x, 2]) else None
             descricao_reduzida = str(df.iloc[x, 3])[:50] if pd.notna(df.iloc[x, 3]) else None
-            marca = str(df.iloc[x, 4]) if pd.notna(df.iloc[x, 4]) else None
+            
+            marca = int(df.iloc[x, 26]) if not pd.isna(df.iloc[x, 26]) else None
+
             referencia = str(df.iloc[x, 5]) if pd.notna(df.iloc[x, 5]) else None
             cod_original = int(df.iloc[x, 6]) if pd.notna(df.iloc[x, 6]) else None
-            comprador = str(df.iloc[x, 7]) if pd.notna(df.iloc[x, 7]) else None
-            ativo = int(df.iloc[x, 8]) if pd.notna(df.iloc[x, 8]) else None
-            unidade = int(df.iloc[x, 9]) if pd.notna(df.iloc[x, 9]) else None
-            classificacao = int(df.iloc[x, 10]) if pd.notna(df.iloc[x, 10]) else None
+            comprador = int(df.iloc[x, 27]) if pd.notna(df.iloc[x, 7]) else None
+            ativo = 1
+            unidade = int(df.iloc[x, 28]) if not pd.isna(df.iloc[x, 9]) else None
+            classificacao = int(df.iloc[x, 10]) if not pd.isna(df.iloc[x, 10]) else None
             origem = str(df.iloc[x, 11]) if pd.notna(df.iloc[x, 11]) else None
             venda = float(df.iloc[x, 12]) if pd.notna(df.iloc[x, 12]) else None
             icms = float(df.iloc[x, 13]) if pd.notna(df.iloc[x, 13]) else None
             ipi = float(df.iloc[x, 14]) if pd.notna(df.iloc[x, 14]) else None
-            etiqueta = int(df.iloc[x, 15]) if pd.notna(df.iloc[x, 15]) else None
-            data = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-            parametros = (
-    secao, especie, None, descricao, descricao_reduzida, marca, data, unidade, 
-    None, None, 0, 0, 0, None, 1, 0, None, referencia, None, classificacao, 
-    None, 9, venda, origem, None, None, None, None, None, None, 1, None, None, 
-    None, None, None
-)
+            etiqueta = int(df.iloc[x, 29]) if pd.notna(df.iloc[x, 15]) else None
+            data = datetime.now()
+            prd_codigo = None
+            prd_data_ultima_compra = None
+            prd_data_ultima_entrega = None
+            prd_custo_medio = 0
+            prd_preco_medio = 0
+            prd_aliquota_icms = 0
+            prd_ultimo_custo = 0
+            prd_arquivo_foto = None
+            prd_tipo_tributacao = None
+            und_codigo = 9
+            usu_codigo_cadastro = None
+            sec_codigo_r = None
+            esp_codigo_r = None
+            prd_permite_comprar = 1
+            prd_valor_unidade_conversao = None
+            udc_codigo = None
+            und_codigo_conversao = None
+            prd_iat = None
+            prd_ippt = None
 
             cursor.execute("""
-                INSERT INTO tb_produto 
-                (sec_codigo, esp_codigo, prd_codigo, prd_descricao, prd_descricao_reduzida, 
-                mar_codigo, prd_data_cadastro, prd_unidade, prd_data_ultima_compra, 
-                prd_data_ultima_entrega, prd_custo_medio, prd_preco_medio, prd_aliquota_icms, 
-                prd_codigo_original, prd_ativo, prd_ultimo_custo, prd_arquivo_foto, 
-                prd_referencia_fornec, prd_tipo_tributacao, clf_codigo, usu_codigo_comprador, 
-                und_codigo, prd_valor_venda, prd_origem, prd_percentual_icms, prd_percentual_ipi, 
-                etq_codigo_padrao, usu_codigo_cadastro, sec_codigo_r, esp_codigo_r, 
-                prd_permite_comprar, prd_valor_unidade_conversao, udc_codigo, und_codigo_conversao, 
-                prd_iat, prd_ippt)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
-                           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, parametros)
+                SELECT COUNT(1)
+                FROM tb_produto
+                WHERE prd_referencia_fornec = ? AND mar_codigo = ?
+            """, referencia, marca)
 
-            connection.commit()
+            produto_existe = cursor.fetchone()[0] > 0
 
-        print("Dados inseridos com sucesso!")
+            if produto_existe:
+                duplicata += 1
+
+            if not produto_existe:
+                parametros = (
+                    secao, especie, prd_codigo, descricao, descricao_reduzida, marca, data, unidade,
+                    prd_data_ultima_compra if prd_data_ultima_compra else None,
+                    prd_data_ultima_entrega if prd_data_ultima_entrega else None,
+                    prd_custo_medio, prd_preco_medio, prd_aliquota_icms, cod_original, ativo, prd_ultimo_custo,
+                    prd_arquivo_foto, referencia, prd_tipo_tributacao, classificacao, comprador, und_codigo, venda,
+                    origem, icms, ipi, etiqueta, usu_codigo_cadastro, sec_codigo_r, esp_codigo_r, prd_permite_comprar,
+                    prd_valor_unidade_conversao, udc_codigo, und_codigo_conversao, prd_iat, prd_ippt
+                    )
+
+
+                cursor.execute("""
+                    INSERT INTO tb_produto
+                    (sec_codigo, esp_codigo, prd_codigo, prd_descricao, prd_descricao_reduzida,
+                    mar_codigo, prd_data_cadastro, prd_unidade, prd_data_ultima_compra,
+                    prd_data_ultima_entrega, prd_custo_medio, prd_preco_medio, prd_aliquota_icms,
+                    prd_codigo_original, prd_ativo, prd_ultimo_custo, prd_arquivo_foto,
+                    prd_referencia_fornec, prd_tipo_tributacao, clf_codigo, usu_codigo_comprador,
+                    und_codigo, prd_valor_venda, prd_origem, prd_percentual_icms, prd_percentual_ipi,
+                    etq_codigo_padrao, usu_codigo_cadastro, sec_codigo_r, esp_codigo_r,
+                    prd_permite_comprar, prd_valor_unidade_conversao, udc_codigo, und_codigo_conversao,
+                    prd_iat, prd_ippt)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, parametros)
+
+                connection.commit()
+                print("Dados inseridos com sucesso!")
+            
+            else:
+                print(f"Produto com referência '{referencia}' da marca '{marca}' já existe no banco de dados. Produto não inserido.")
 
     except Exception as e:
         print(f"Erro ao processar o arquivo: {e}")
