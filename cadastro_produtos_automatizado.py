@@ -27,24 +27,20 @@ else:
         null_value = None
         df_teste = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos")
         
-        # Lendo todas as colunas disponíveis
-        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos", skiprows=5, header=None)
+        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos", skiprows=6, header=None)
+        pd.set_option('display.max_columns', None)
 
-        # Verifique o número de colunas
         print(f"Total de colunas lidas: {len(df.columns)}")
         
-        # Ajuste automático das colunas
         df.columns = [
             "secao", "especie", "descricao", "descricao_reduzida", "marca", "referencia",
             "cod_original", "comprador", "ativo", "unidade", "classificacao", "origem",
             "venda", "icms", "ipi", "etiqueta", "coluna17", "coluna18", "coluna19", "coluna20",
             "coluna21", "coluna22", "coluna23", "coluna24", "coluna25", "coluna26", "coluna27"
-        ] + [f"coluna{i}" for i in range(28, len(df.columns) + 1)]  # Adiciona colunas extras se houver
+        ] + [f"coluna{i}" for i in range(28, len(df.columns) + 1)]
 
-        # Remover linhas vazias
         df = df.dropna(how='all')
 
-        # Convertendo colunas para tipos corretos
         df['secao'] = pd.to_numeric(df['secao'], errors='coerce').fillna(0).astype('int16')
         df['especie'] = pd.to_numeric(df['especie'], errors='coerce').fillna(0).astype('int16')
         df['cod_original'] = pd.to_numeric(df['cod_original'], errors='coerce').fillna(0).astype('int16')
@@ -61,6 +57,7 @@ else:
         df['coluna28'] = pd.to_numeric(df['coluna28'], errors='coerce').fillna(0).astype('int16')
         df['coluna29'] = pd.to_numeric(df['coluna29'], errors='coerce').fillna(0).astype('int16')
         df['coluna30'] = pd.to_numeric(df['coluna30'], errors='coerce').fillna(0).astype('int16')
+        df['coluna31'] = pd.to_numeric(df['coluna31'], errors='coerce').fillna(0).astype('int16')
  
         print("Dados a serem importados:")
         print(df.head(200))
@@ -69,7 +66,6 @@ else:
         total_itens = len(df)
 
         for x in range(len(df)):
-            # Certificando-se de que os índices existem antes de acessá-los
             secao = int(df.iloc[x, 24]) if not pd.isna(df.iloc[x, 24]) else None
             especie = int(df.iloc[x, 25]) if not pd.isna(df.iloc[x, 25]) else None
 
@@ -80,15 +76,15 @@ else:
 
             referencia = str(df.iloc[x, 5]) if pd.notna(df.iloc[x, 5]) else None
             cod_original = int(df.iloc[x, 6]) if pd.notna(df.iloc[x, 6]) else None
-            comprador = int(df.iloc[x, 27]) if pd.notna(df.iloc[x, 7]) else None
+            comprador = int(df.iloc[x, 27]) if pd.notna(df.iloc[x, 27]) else None
             ativo = 1
-            unidade = int(df.iloc[x, 28]) if not pd.isna(df.iloc[x, 9]) else None
-            classificacao = int(df.iloc[x, 10]) if not pd.isna(df.iloc[x, 10]) else None
+            unidade = int(df.iloc[x, 28]) if not pd.isna(df.iloc[x, 28]) else None
+            classificacao = int(df.iloc[x, 29]) if not pd.isna(df.iloc[x, 29]) else None
             origem = str(df.iloc[x, 11]) if pd.notna(df.iloc[x, 11]) else None
-            venda = float(df.iloc[x, 12]) if pd.notna(df.iloc[x, 12]) else None
+            venda = float(str(df.iloc[x, 12]).replace(',', '.')) if pd.notna(df.iloc[x, 12]) else None
             icms = float(df.iloc[x, 13]) if pd.notna(df.iloc[x, 13]) else None
             ipi = float(df.iloc[x, 14]) if pd.notna(df.iloc[x, 14]) else None
-            etiqueta = int(df.iloc[x, 29]) if pd.notna(df.iloc[x, 15]) else None
+            etiqueta = int(df.iloc[x, 30]) if pd.notna(df.iloc[x, 30]) else None
             data = datetime.now()
             prd_codigo = None
             prd_data_ultima_compra = None
