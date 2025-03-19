@@ -13,7 +13,7 @@ def get_connection(driver='SQL Server Native Client 11.0', server='localhost', d
 def selecionar_arquivo():
     root = tk.Tk()
     root.withdraw()
-    arquivo_path = filedialog.askopenfilename(title="Selecione o arquivo Excel", filetypes=[("Arquivos Excel", "*.xlsx;*.xls")])
+    arquivo_path = filedialog.askopenfilename(title="Selecione o arquivo Excel", filetypes=[("Arquivos Excel", "*.xlsx;*.xls;*.xlsm")])
     return arquivo_path
 
 caminho_arquivo = selecionar_arquivo()
@@ -28,9 +28,9 @@ else:
         df_teste = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos")
         
         df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos", skiprows=6, header=None)
-        pd.set_option('display.max_columns', None)
+        #pd.set_option('display.max_columns', None)
 
-        print(f"Total de colunas lidas: {len(df.columns)}")
+        #print(f"Total de colunas lidas: {len(df.columns)}")
         
         df.columns = [
             "secao", "especie", "descricao", "descricao_reduzida", "marca", "referencia",
@@ -59,8 +59,8 @@ else:
         df['coluna30'] = pd.to_numeric(df['coluna30'], errors='coerce').fillna(0).astype('int16')
         df['coluna31'] = pd.to_numeric(df['coluna31'], errors='coerce').fillna(0).astype('int16')
  
-        print("Dados a serem importados:")
-        print(df.head(200))
+        #print("Dados a serem importados:")
+        #print(df.head(200))
 
         duplicata = 0
         total_itens = len(df)

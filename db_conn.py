@@ -1,9 +1,12 @@
+import os
 import pyodbc
 import openpyxl
-import win32com.client as win32  # Para executar a macro
-from openpyxl.worksheet.datavalidation import DataValidation
+import shutil
+import win32com.client as win32
+import winreg as reg
 import time
-from tqdm import tqdm  # Biblioteca para barra de progresso
+from openpyxl.worksheet.datavalidation import DataValidation
+from tqdm import tqdm
 
 def get_connection(driver='SQL Server Native Client 11.0', server='localhost', database='NexttLoja', username='sa', password=None, trusted_connection='yes'):
     string_connection = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password};Trusted_Connection={trusted_connection}"
@@ -11,8 +14,9 @@ def get_connection(driver='SQL Server Native Client 11.0', server='localhost', d
     cursor = connection.cursor()
     return connection, cursor
 
-def obter_dados_necessarios():
-    inicio = time.time()  # Marca o tempo inicial
+def dados_necessarios():
+    print(f"Adicionando informações à planilha: {caminho_arquivo}")
+    inicio = time.time()
     connection, cursor = get_connection()
 
     consultas = {
@@ -36,18 +40,23 @@ def obter_dados_necessarios():
     resultados = {}
 
     print("Buscando dados do banco de dados...")
-    for chave, query in tqdm(consultas.items(), desc="Executando queries"):  # Barra de progresso
+    for chave, query in tqdm(consultas.items(), desc="Executando queries"):
         cursor.execute(query)
         resultados[chave] = [row[0] for row in cursor.fetchall()]
     
     connection.close()
 
-    print(f"Tempo total para obter dados: {time.time() - inicio:.2f} segundos")
+    print(f"Tempo total para obter dados: {time.time() - inicio:.2f} segundos\n")
     return resultados
 
 def preencher_planilha(dados, caminho_arquivo):
-    inicio = time.time()  # Tempo inicial
-    wb = openpyxl.load_workbook(caminho_arquivo)
+    # Cria uma cópia da planilha original, renomeando para 'Cadastros Auto Nextt.xlsx'
+    caminho_arquivo_novo = caminho_arquivo.replace("Cadastros Auto Nextt limpa", "Cadastros Auto Nextt")
+    shutil.copy(caminho_arquivo, caminho_arquivo_novo)
+
+    # Agora, vamos preencher a nova planilha copiada
+    inicio = time.time()
+    wb = openpyxl.load_workbook(caminho_arquivo_novo)
     
     nome_aba_dados = "Dados Consolidados"
     if nome_aba_dados in wb.sheetnames:
@@ -91,9 +100,9 @@ def preencher_planilha(dados, caminho_arquivo):
 
     empresa_nome = dados.get("empresa_nome")[0]
     aba_planilha['A2'] = f"Cadastro de Produtos {empresa_nome}"
-    print(f"Definindo nome da empresa '{empresa_nome}' em: '{aba_planilha.title}'")
+    print(f"\nDefinindo nome da empresa '{empresa_nome}' em: '{aba_planilha.title}'\n")
 
-    wb.save(caminho_arquivo)
+    wb.save(caminho_arquivo_novo)
 
     def adicionar_validacao_coluna(coluna, dados_coluna, primeira_linha=7):
         primeira_linha_dados = 2
@@ -111,10 +120,9 @@ def preencher_planilha(dados, caminho_arquivo):
             aba_planilha[f"{coluna}{i}"].value = None  
             dv.add(aba_planilha[f"{coluna}{i}"])  
 
-    # Atualizar a validação de dados na coluna B (a partir da linha 7)
     print("Atualizando validação de dados na coluna B...")
     for i in range(7, aba_planilha.max_row + 1):
-        formula = f'=INDIRETO("\'Dados Consolidados\'!SeçãoCompleta" & Y{i})'
+        formula = f'=INDIRECT("\'Dados Consolidados\'!SecaoCompleta" & Y{i})'
         
         dv = DataValidation(type="list", formula1=formula, showDropDown=False)
         dv.error = "Por favor, selecione um valor da lista."
@@ -122,113 +130,36 @@ def preencher_planilha(dados, caminho_arquivo):
         dv.showErrorMessage = True
         
         aba_planilha.add_data_validation(dv)
-        dv.add(aba_planilha[f"B{i}"])  # Aplica a validação na célula da linha i
+        dv.add(aba_planilha[f"B{i}"])  
 
     max_linhas = max(len(lista) for lista in dados.values()) + 10  
 
     colunas_com_validacao = ["A", "B", "E", "H", "J", "K", "P"]
 
-    print("Adicionando validação de dados...")    
+    print("Adicionando validação de dados gerais...\n")    
     for chave, coluna in tqdm(mapeamento_colunas.items(), desc="Validação"):
-        if coluna in colunas_com_validacao and chave in dados:  # Aplicar apenas para as colunas desejadas
+        if coluna in colunas_com_validacao and chave in dados:  
             adicionar_validacao_coluna(coluna, dados[chave])
 
-    wb.save(caminho_arquivo)
-    wb.close()
-
+    wb.save(caminho_arquivo_novo)
+    
     tempo_total = time.time() - inicio
 
     if tempo_total > 60:
         minutos = int(tempo_total // 60)
         segundos = tempo_total % 60
-        print(f"Tempo total para preencher planilha: {minutos} minutos e {segundos:.0f} segundos")
+        print(f"Tempo total para preencher planilha: {minutos} minutos e {segundos:.0f} segundos\n")
     else:
-        print(f"Tempo total para preencher planilha: {tempo_total:.0f} segundos")
+        print(f"Tempo total para preencher planilha: {tempo_total:.0f} segundos\n")
 
-def adicionar_macro_vba(caminho_arquivo):
-    # Inicializa o Excel e abre o arquivo
-    excel = win32.Dispatch("Excel.Application")
-    excel.Visible = True  # Não mostrar a janela do Excel
-
-    wb = excel.Workbooks.Open(caminho_arquivo)
-    vb_module = wb.VBProject.VBComponents.Add(1)  # Adiciona um módulo de código VBA
-
-    # Código VBA da macro
-    vba_code = """
-    Sub CriarIntervalosNomeadosB()
-        Dim ws As Worksheet
-        Dim ultimaLinha As Long
-        Dim inicio As Long
-        Dim i As Long
-        Dim secao As Integer
-        Dim nomeSecao As String
-        Dim rng As Range
-
-        ' Definir a planilha
-        Set ws = ThisWorkbook.Sheets("Dados Consolidados")
-
-        ' Encontrar a última linha preenchida na coluna B
-        ultimaLinha = ws.Cells(ws.Rows.Count, 2).End(xlUp).Row
-
-        ' Inicializar variáveis
-        secao = 1
-        inicio = 2 ' Começar na linha 2
-
-        ' Percorrer a coluna B
-        For i = 2 To ultimaLinha
-            If Left(ws.Cells(i, 2).Value, 2) = "1 " Then
-                ' Criar um intervalo nomeado para a seção anterior (se existir)
-                If inicio < i Then
-                    nomeSecao = "SeçãoCompleta" & secao
-                    Set rng = ws.Range("B" & inicio & ":B" & (i - 1))
-                    ws.Names.Add Name:=nomeSecao, RefersTo:=rng
-                    secao = secao + 1
-                End If
-                ' Atualizar o início para a nova seção
-                inicio = i
-            End If
-        Next i
-
-        ' Criar o último intervalo
-        If inicio <= ultimaLinha Then
-            nomeSecao = "SeçãoCompleta" & secao
-            Set rng = ws.Range("B" & inicio & ":B" & ultimaLinha)
-            ws.Names.Add Name:=nomeSecao, RefersTo:=rng
-        End If
-
-        MsgBox "Intervalos nomeados criados com sucesso!", vbInformation
-    End Sub
-    """
-
-    # Adiciona o código VBA no módulo
-    vb_module.CodeModule.AddFromString(vba_code)
-    wb.Save()  # Salva o arquivo após adicionar o código
-    wb.Close()
-    excel.Quit()
-
-def executar_macro(caminho_arquivo):
-    # Inicializa o Excel para executar a macro
-    excel = win32.Dispatch("Excel.Application")
-    excel.Visible = False  # Não mostrar o Excel
-
-    wb = excel.Workbooks.Open(caminho_arquivo)
-    
-    # Executa a macro
-    excel.Application.Run("CriarIntervalosNomeadosB")
-
-    wb.Save()  # Salva o arquivo após a execução da macro
-    wb.Close()
-    excel.Quit()
-
-# Executando o script
 caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
-dados = obter_dados_necessarios()
+
+if not os.path.exists(caminho_arquivo):
+    print(f"Arquivo não encontrado: {caminho_arquivo}")
+    exit()
+
+dados = dados_necessarios()
+
 preencher_planilha(dados, caminho_arquivo)
 
-# Agora adiciona a macro VBA ao arquivo
-adicionar_macro_vba(caminho_arquivo)
-
-# Executa a macro após o preenchimento da planilha
-executar_macro(caminho_arquivo)
-
-print("Dados preenchidos e macro executada com sucesso.")
+print("Dados preenchidos com sucesso e a planilha original foi excluída.")
