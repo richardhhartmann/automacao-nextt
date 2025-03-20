@@ -153,7 +153,7 @@ def preencher_planilha(dados, caminho_arquivo):
     print("Adicionando validação de dados gerais...\n")    
     for chave, coluna in tqdm(mapeamento_colunas.items(), desc="Validação"):
         if coluna in colunas_com_validacao and chave in dados:  
-            adicionar_validacao(aba_planilha, f"{coluna}7:{coluna}{max_linhas}", f"'{nome_aba_dados}'!${coluna}$2:${coluna}${len(dados[chave]+1)}")
+            adicionar_validacao(aba_planilha, f"{coluna}7:{coluna}{max_linhas}", f"'{nome_aba_dados}'!${coluna}$2:${coluna}${len(dados[chave])}")
 
     wb.save(caminho_arquivo_novo)
     
