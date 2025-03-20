@@ -36,8 +36,9 @@ else:
             "secao", "especie", "descricao", "descricao_reduzida", "marca", "referencia",
             "cod_original", "comprador", "ativo", "unidade", "classificacao", "origem",
             "venda", "icms", "ipi", "etiqueta", "coluna17", "coluna18", "coluna19", "coluna20",
-            "coluna21", "coluna22", "coluna23", "coluna24", "coluna25", "coluna26", "coluna27"
-        ] + [f"coluna{i}" for i in range(28, len(df.columns) + 1)]
+            "coluna21", "coluna22", "coluna23", "coluna24", "coluna25", "coluna26", "coluna27",
+            "coluna28", "coluna29", "coluna30", "coluna31"
+        ] + [f"coluna{i}" for i in range(32, len(df.columns) + 1)]
 
         df = df.dropna(how='all')
 
@@ -45,7 +46,6 @@ else:
         df['especie'] = pd.to_numeric(df['especie'], errors='coerce').fillna(0).astype('int16')
         df['cod_original'] = pd.to_numeric(df['cod_original'], errors='coerce').fillna(0).astype('int16')
         df['ativo'] = df['ativo'].astype('Int64', errors='ignore').astype('object')
-        df['unidade'] = pd.to_numeric(df['unidade'], errors='coerce').fillna(0).astype('int16')
         df['classificacao'] = pd.to_numeric(df['classificacao'], errors='coerce').fillna(0).astype('int16')
         df['venda'] = pd.to_numeric(df['venda'], errors='coerce').fillna(0).astype('int16')
         df['origem'] = pd.to_numeric(df['origem'], errors='coerce').fillna(0).astype('int16')
@@ -75,10 +75,11 @@ else:
             marca = int(df.iloc[x, 26]) if not pd.isna(df.iloc[x, 26]) else None
 
             referencia = str(df.iloc[x, 5]) if pd.notna(df.iloc[x, 5]) else None
-            cod_original = int(df.iloc[x, 6]) if pd.notna(df.iloc[x, 6]) else None
+            #cod_original = int(df.iloc[x, 6]) if pd.notna(df.iloc[x, 6]) else None
+            cod_original = None
             comprador = int(df.iloc[x, 27]) if pd.notna(df.iloc[x, 27]) else None
             ativo = 1
-            unidade = int(df.iloc[x, 28]) if not pd.isna(df.iloc[x, 28]) else None
+            unidade = str(df.iloc[x, 9]) if pd.notna(df.iloc[x, 9]) else None
             classificacao = int(df.iloc[x, 29]) if not pd.isna(df.iloc[x, 29]) else None
             origem = str(df.iloc[x, 11]) if pd.notna(df.iloc[x, 11]) else None
             venda = float(str(df.iloc[x, 12]).replace(',', '.')) if pd.notna(df.iloc[x, 12]) else None
@@ -95,7 +96,7 @@ else:
             prd_ultimo_custo = 0
             prd_arquivo_foto = None
             prd_tipo_tributacao = None
-            und_codigo = 9
+            und_codigo = int(df.iloc[x, 28]) if not pd.isna(df.iloc[x, 28]) else None
             usu_codigo_cadastro = None
             sec_codigo_r = None
             esp_codigo_r = None

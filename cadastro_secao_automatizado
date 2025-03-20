@@ -1,0 +1,59 @@
+import pandas as pd
+import pyodbc
+import tkinter as tk
+from tkinter import filedialog
+
+def get_connection(driver='SQL Server Native Client 11.0', server='localhost', database='NexttLoja', username='sa', password=None, trusted_connection='yes'):
+    string_connection = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password};Trusted_Connection={trusted_connection}"
+    connection = pyodbc.connect(string_connection)
+    cursor = connection.cursor()
+    return connection, cursor
+
+def selecionar_arquivo():
+    root = tk.Tk()
+    root.withdraw()
+    arquivo_path = filedialog.askopenfilename(title="Selecione o arquivo Excel", filetypes=[("Arquivos Excel", "*.xlsx;*.xls")])
+    return arquivo_path
+
+caminho_arquivo = selecionar_arquivo()
+
+if not caminho_arquivo:
+    print("Nenhum arquivo selecionado. O programa será encerrado.")
+else:
+    connection, cursor = get_connection()
+
+    try:
+        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Seção", skiprows=5, usecols="A,C")
+        df.columns = ['descricao', 'seg_codigo']
+
+        df = df.dropna(subset=['seg_codigo'])
+
+        df['seg_codigo'] = df['seg_codigo'].astype(int)
+
+        for x in range(len(df)):
+            descricao = str(df.iloc[x, 0])[:50] if pd.notna(df.iloc[x, 0]) else "Descrição não informada"
+            seg_codigo = int(df.iloc[x, 1])
+
+            cursor.execute("SELECT MAX(sec_codigo) FROM tb_secao")
+            resultado = cursor.fetchone()
+            maior_sec_codigo = resultado[0] if resultado[0] is not None else 0
+
+            sec_codigo_incrementado = maior_sec_codigo + 1
+
+            cursor.execute("""
+                INSERT INTO tb_secao (sec_codigo, sec_descricao, seg_codigo, sec_permite_item_produto, 
+                sec_ativo, usu_codigo_comprador, clf_codigo) values (?, ?, ?, 1, 1, 1, NULL)
+            """, sec_codigo_incrementado, descricao, seg_codigo)
+
+            connection.commit()
+            print(f"Seção '{descricao}' inserida com sec_codigo {sec_codigo_incrementado} no segmento {seg_codigo}.")
+
+        print("\nDados inseridos com sucesso!")
+
+    except Exception as e:
+        print(f"\nOcorreu um erro: {e}")
+        connection.rollback()
+
+    finally:
+        cursor.close()
+        connection.close()

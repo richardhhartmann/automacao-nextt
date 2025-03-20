@@ -3,7 +3,8 @@ from db_module import importar_modulo_vba
 import os
 
 caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
-caminho_modulo_vba = "CriarIntervalosNomeadosB.bas"
+caminho_novo_arquivo = 'Cadastros Auto Nextt.xlsx'
+modulos_vba = ["CriarIntervalosNomeadosB.bas", "ValidarCamposCadastro.bas"]
 
 if not os.path.exists(caminho_arquivo):
     print(f"Arquivo não encontrado: {caminho_arquivo}")
@@ -14,7 +15,7 @@ dados = dados_necessarios()
 def main():
     preencher_planilha(dados, caminho_arquivo)
 
-    importar_modulo_vba(caminho_arquivo, caminho_modulo_vba)
+    importar_modulo_vba(caminho_novo_arquivo, modulos_vba)
 
     print("Dados preenchidos com sucesso.")
     

@@ -30,11 +30,13 @@ def dados_necessarios():
         "especie_completa": "SELECT CAST(esp_codigo AS VARCHAR) + ' - ' + LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))) AS descricao_completa FROM tb_especie;",
         "marca_completa": "SELECT CONCAT(mar_codigo, ' - ', mar_descricao) AS descricao_completa FROM tb_marca;",
         "comprador_completo": "SELECT CONCAT(usu_codigo, ' - ', usu_nome) AS descricao_completa FROM tb_usuario WHERE set_codigo IS NULL and usu_codigo <> 1 and usu_codigo <> 2",
-        "unidade_completa": "SELECT CONCAT(und_codigo, ' - ', und_descricao) AS descricao_completa FROM tb_unidade ",
+        "unidade_completa": "SELECT und_descricao from tb_unidade ",
         "etiqueta_completa": "SELECT CONCAT(etq_codigo, ' - ', etq_descricao) AS descricao_completa FROM tb_etiqueta ",
         "empresa_nome": "SELECT emp_descricao FROM tb_empresa",
         "clf_codigo": "SELECT MIN(clf_codigo) AS clf_codigo FROM tb_classificacao_fiscal WHERE clf_ativo = 1 GROUP BY clf_descricao ORDER BY clf_codigo ASC",
-        "classificacao_completa": "SELECT CONCAT(MIN(clf_codigo_fiscal), ' - ', clf_descricao) AS descricao_completa FROM tb_classificacao_fiscal WHERE clf_ativo = 1 GROUP BY clf_descricao ORDER BY descricao_completa ASC"
+        "classificacao_completa": "SELECT CONCAT(MIN(clf_codigo_fiscal), ' - ', clf_descricao) AS descricao_completa FROM tb_classificacao_fiscal WHERE clf_ativo = 1 GROUP BY clf_descricao ORDER BY descricao_completa ASC",
+        "seg_codigo": "SELECT seg_codigo FROM tb_segmento",
+        "segmento_completo": "SELECT seg_descricao FROM tb_segmento"
     }
 
     resultados = {}
@@ -78,7 +80,9 @@ def preencher_planilha(dados, caminho_arquivo):
         "comprador_completo": "H",
         "unidade_completa": "J",
         "classificacao_completa": "K",
-        "etiqueta_completa": "P"
+        "etiqueta_completa": "P",
+        "segmento_completo": "AR",
+        "seg_codigo": "AS"
     }
 
     print("Limpando planilha e preenchendo novos dados...")
@@ -104,24 +108,24 @@ def preencher_planilha(dados, caminho_arquivo):
 
     wb.save(caminho_arquivo_novo)
 
-    def adicionar_validacao_coluna(coluna, dados_coluna, primeira_linha=7):
-        primeira_linha_dados = 2
-        ultima_linha_dados = primeira_linha_dados + len(dados_coluna) - 1
-        referencia_validacao = f"'{nome_aba_dados}'!${coluna}${primeira_linha_dados}:${coluna}${ultima_linha_dados}"
-        
-        dv = DataValidation(type="list", formula1=referencia_validacao, showDropDown=False)
+    # Função de adicionar validação
+    def adicionar_validacao(aba, intervalo_celulas, referencia_dados):
+
+        dv = DataValidation(type="list", formula1=referencia_dados, showDropDown=False)
         dv.error = "Por favor, selecione um valor da lista."
         dv.errorTitle = "Valor Inválido"
         dv.showErrorMessage = True
-        
-        aba_planilha.add_data_validation(dv)
 
-        for i in range(primeira_linha, primeira_linha + max_linhas):
-            aba_planilha[f"{coluna}{i}"].value = None  
-            dv.add(aba_planilha[f"{coluna}{i}"])  
+        # Aplicar validação às células do intervalo
+        aba.add_data_validation(dv)
+        for linha in aba[intervalo_celulas]:
+            for celula in linha:
+                dv.add(celula)
 
+    # Atualizando a validação de dados na coluna B com a fórmula dinâmica
     print("Atualizando validação de dados na coluna B...")
     for i in range(7, aba_planilha.max_row + 1):
+        # A fórmula agora usa a referência indireta à célula da coluna Y para a validação
         formula = f'=INDIRECT("\'Dados Consolidados\'!SecaoCompleta" & Y{i})'
         
         dv = DataValidation(type="list", formula1=formula, showDropDown=False)
@@ -130,7 +134,17 @@ def preencher_planilha(dados, caminho_arquivo):
         dv.showErrorMessage = True
         
         aba_planilha.add_data_validation(dv)
-        dv.add(aba_planilha[f"B{i}"])  
+        dv.add(aba_planilha[f"B{i}"])  # Aplica a validação na célula B{i}
+
+    # Adicionando validação na aba Cadastro de Seção (B7:B200)
+    if "Cadastro de Seção" in wb.sheetnames:
+        aba_secao = wb["Cadastro de Seção"]
+        adicionar_validacao(aba_secao, "B7:B200", f"'Dados Consolidados'!$AR$2:$AR${len(dados['secao_completa'])}")
+
+    # Adicionando validação na aba Cadastro de Espécie (B7:B200)
+    if "Cadastro de Espécie" in wb.sheetnames:
+        aba_especie = wb["Cadastro de Espécie"]
+        adicionar_validacao(aba_especie, "B7:B200", f"'Dados Consolidados'!$A$2:$A${len(dados['especie_completa'])}")
 
     max_linhas = max(len(lista) for lista in dados.values()) + 10  
 
@@ -139,7 +153,7 @@ def preencher_planilha(dados, caminho_arquivo):
     print("Adicionando validação de dados gerais...\n")    
     for chave, coluna in tqdm(mapeamento_colunas.items(), desc="Validação"):
         if coluna in colunas_com_validacao and chave in dados:  
-            adicionar_validacao_coluna(coluna, dados[chave])
+            adicionar_validacao(aba_planilha, f"{coluna}7:{coluna}{max_linhas}", f"'{nome_aba_dados}'!${coluna}$2:${coluna}${len(dados[chave]+1)}")
 
     wb.save(caminho_arquivo_novo)
     
@@ -159,7 +173,5 @@ if not os.path.exists(caminho_arquivo):
     exit()
 
 dados = dados_necessarios()
-
-preencher_planilha(dados, caminho_arquivo)
 
 print("Dados preenchidos com sucesso e a planilha original foi excluída.")

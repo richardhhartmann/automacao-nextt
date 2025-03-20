@@ -1,21 +1,34 @@
 import win32com.client
 import os
-import shutil
+import pyodbc
 
-def converter_xlsx_para_xlsm(caminho_xlsx):
-    caminho_xlsm = caminho_xlsx.replace(".xlsx", ".xlsm")
+def obter_nome_empresa():
+    try:
+        conexao = pyodbc.connect("DRIVER=SQL Server Native Client 11.0;SERVER=localhost;DATABASE=NexttLoja;UID=sa;PWD=;Trusted_Connection=yes")
+        cursor = conexao.cursor()
+        cursor.execute("SELECT emp_descricao FROM tb_empresa")
+        resultado = cursor.fetchone()
+        conexao.close()
+
+        if resultado:
+            return resultado[0].strip()  # Remove espaços extras caso existam
+        else:
+            return "Desconhecida"
+    except Exception as e:
+        print(f"Erro ao buscar o nome da empresa: {e}")
+        return "Erro"
+
+def converter_xlsx_para_xlsm(caminho_xlsx, nome_empresa):
+    nome_empresa = nome_empresa.replace(" ", "_")  # Substituir espaços por underline para evitar erros
+    caminho_xlsm = caminho_xlsx.replace(".xlsx", f" - {nome_empresa}.xlsm")
     
-    # Se o arquivo já for .xlsm, não faz nada
-    if caminho_xlsx == caminho_xlsm:
-        return caminho_xlsm
-
     excel = win32com.client.Dispatch("Excel.Application")
-    excel.Visible = False  # Mantenha invisível enquanto converte
+    excel.Visible = False  
 
     try:
         print(f"Convertendo {caminho_xlsx} para {caminho_xlsm}...")
         wb = excel.Workbooks.Open(os.path.abspath(caminho_xlsx))
-        wb.SaveAs(os.path.abspath(caminho_xlsm), FileFormat=52)  # 52 é o formato XLSM
+        wb.SaveAs(os.path.abspath(caminho_xlsm), FileFormat=52)  
         wb.Close()
         print("Conversão concluída com sucesso!")
         return caminho_xlsm
@@ -25,39 +38,56 @@ def converter_xlsx_para_xlsm(caminho_xlsx):
     finally:
         excel.Quit()
 
-def importar_modulo_vba(caminho_arquivo, caminho_modulo_vba):
-    # Converter para XLSM se necessário
-    caminho_planilha_xlsm = converter_xlsx_para_xlsm(caminho_arquivo)
+def importar_modulo_vba(caminho_arquivo, modulos_vba):
+    nome_empresa = obter_nome_empresa()
+    caminho_planilha_xlsm = converter_xlsx_para_xlsm(caminho_arquivo, nome_empresa)
+    
     if not caminho_planilha_xlsm:
         print("Erro ao converter para XLSM, abortando o processo.")
         return
 
-    print("Iniciando importação do módulo VBA...")
+    print("Iniciando importação dos módulos VBA...")
 
-    if not os.path.exists(caminho_modulo_vba):
-        print(f"Erro: O arquivo do módulo VBA '{caminho_modulo_vba}' não foi encontrado.")
-        return
-
-    print("Arquivos encontrados. Abrindo o Excel...")
+    for modulo in modulos_vba:
+        if not os.path.exists(modulo):
+            print(f"Erro: O arquivo do módulo VBA '{modulo}' não foi encontrado.")
+            return
 
     excel = win32com.client.Dispatch("Excel.Application")
-    excel.Visible = True  # Para visualizar a execução
+    excel.Visible = True  
 
     try:
         print(f"Abrindo a planilha: {caminho_planilha_xlsm}")
         wb = excel.Workbooks.Open(os.path.abspath(caminho_planilha_xlsm))
-        
+
         print("Verificando acesso ao projeto VBA...")
+
         if not wb.VBProject.Protection:
-            print(f"Importando o módulo VBA: {caminho_modulo_vba}")
-            wb.VBProject.VBComponents.Import(os.path.abspath(caminho_modulo_vba))
+            ws = wb.Sheets("Cadastro de Produtos") 
+            vba_module_planilha = wb.VBProject.VBComponents(ws.CodeName) 
 
-            print("Módulo importado com sucesso!")
+            if "ValidarCamposCadastro.bas" in modulos_vba:
+                print(f"Importando o módulo VBA 'ValidarCamposCadastro' para a planilha.")
+                vba_module_planilha.CodeModule.AddFromFile(os.path.abspath("ValidarCamposCadastro.bas"))
+            
+            for modulo in modulos_vba:
+                if modulo != "ValidarCamposCadastro.bas": 
+                    try:
+                        print(f"Importando o módulo VBA: {modulo}")
+                        wb.VBProject.VBComponents.Import(os.path.abspath(modulo))  
+                        print(f"Módulo {modulo} importado com sucesso!")
+                    except Exception as e:
+                        print(f"Erro ao importar o módulo {modulo}: {e}")
 
-            # Chamar diretamente a macro que você deseja executar
-            print("Executando a macro CriarIntervalosNomeadosB...")
-            wb.Application.Run("CriarIntervalosNomeadosB")
+            print("Módulos importados com sucesso!")
 
+            try:
+                print("Executando a macro CriarIntervalosNomeadosB...")
+                wb.Application.Run("CriarIntervalosNomeadosB") 
+                print("Macro executada com sucesso!")
+            except Exception as e:
+                print(f"Erro ao executar a macro CriarIntervalosNomeadosB: {e}")
+                
         else:
             print("Erro: O projeto VBA está protegido. Remova a proteção antes de importar módulos.")
 
@@ -65,18 +95,16 @@ def importar_modulo_vba(caminho_arquivo, caminho_modulo_vba):
         wb.Save()
         wb.Close()
 
-        # Agora, devemos garantir que o arquivo Cadastros Auto Nextt.xlsx seja apagado
-        apagar_arquivo(caminho_arquivo)  # Chama a função para apagar o .xlsx
+        apagar_arquivo(caminho_arquivo)
 
         print("Processo concluído com sucesso!")
     except Exception as e:
-        print(f"Erro ao importar módulo VBA: {e}")
+        print(f"Erro ao importar módulos VBA: {e}")
     finally:
         print("Encerrando o Excel...")
         excel.Quit()
 
 def apagar_arquivo(caminho_arquivo):
-    # Verifica se o arquivo .xlsx existe e o apaga
     try:
         if os.path.exists(caminho_arquivo):
             print(f"Apagando o arquivo original: {caminho_arquivo}")
@@ -86,9 +114,3 @@ def apagar_arquivo(caminho_arquivo):
             print(f"O arquivo {caminho_arquivo} não foi encontrado para exclusão.")
     except Exception as e:
         print(f"Erro ao excluir o arquivo: {e}")
-
-# Caminhos para a planilha e o módulo VBA
-caminho_arquivo = "Cadastros Auto Nextt.xlsx"  # Arquivo original (xlsx)
-caminho_modulo_vba = "CriarIntervalosNomeadosB.bas"
-
-importar_modulo_vba(caminho_arquivo, caminho_modulo_vba)
