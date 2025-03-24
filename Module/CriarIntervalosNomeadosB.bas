@@ -12,9 +12,9 @@ Sub CriarIntervalosNomeadosB()
     ultimaLinha = ws.Cells(ws.Rows.Count, 2).End(xlUp).Row
 
     secao = 1
-    inicio = 2
+    inicio = 1
 
-    For i = 2 To ultimaLinha
+    For i = 1 To ultimaLinha
         If Left(ws.Cells(i, 2).Value, 2) = "1 " Then
             If inicio < i Then
                 nomeSecao = "SecaoCompleta" & secao

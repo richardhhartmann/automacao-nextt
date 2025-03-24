@@ -66,10 +66,25 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba):
             ws = wb.Sheets("Cadastro de Produtos") 
             vba_module_planilha = wb.VBProject.VBComponents(ws.CodeName) 
 
+            # Caminho completo para o módulo ValidarCamposCadastro.bas na pasta "Module" dentro do repositório
+            caminho_modulo_vba = os.path.join(os.getcwd(), "Module", "ValidarCamposCadastro.bas")
+
             if "ValidarCamposCadastro.bas" in modulos_vba:
                 print(f"Importando o módulo VBA 'ValidarCamposCadastro' para a planilha.")
-                vba_module_planilha.CodeModule.AddFromFile(os.path.abspath("ValidarCamposCadastro.bas"))
+                if os.path.exists(caminho_modulo_vba):
+                    vba_module_planilha.CodeModule.AddFromFile(caminho_modulo_vba)
+                    print(f"Módulo 'ValidarCamposCadastro' importado com sucesso!")
+                    
+                    try:
+                        print("Executando a macro ValidarCamposCadastro...")
+                        wb.Application.Run("ValidarCamposCadastro")  # Executa a macro após importar
+                        print("Macro ValidarCamposCadastro executada com sucesso!")
+                    except Exception as e:
+                        print(f"Erro ao executar a macro ValidarCamposCadastro: {e}")
+                else:
+                    print(f"Erro: O módulo 'ValidarCamposCadastro.bas' não foi encontrado na pasta 'Module'.")
             
+            # Importação de outros módulos VBA
             for modulo in modulos_vba:
                 if modulo != "ValidarCamposCadastro.bas": 
                     try:

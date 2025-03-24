@@ -36,7 +36,8 @@ def dados_necessarios():
         "clf_codigo": "SELECT MIN(clf_codigo) AS clf_codigo FROM tb_classificacao_fiscal WHERE clf_ativo = 1 GROUP BY clf_descricao ORDER BY clf_codigo ASC",
         "classificacao_completa": "SELECT CONCAT(MIN(clf_codigo_fiscal), ' - ', clf_descricao) AS descricao_completa FROM tb_classificacao_fiscal WHERE clf_ativo = 1 GROUP BY clf_descricao ORDER BY descricao_completa ASC",
         "seg_codigo": "SELECT seg_codigo FROM tb_segmento",
-        "segmento_completo": "SELECT seg_descricao FROM tb_segmento"
+        "segmento_completo": "SELECT seg_descricao FROM tb_segmento",
+        "marca_descricao": "SELECT mar_descricao from tb_marca"
     }
 
     resultados = {}
@@ -82,7 +83,8 @@ def preencher_planilha(dados, caminho_arquivo):
         "classificacao_completa": "K",
         "etiqueta_completa": "P",
         "segmento_completo": "AR",
-        "seg_codigo": "AS"
+        "seg_codigo": "AS",
+        "marca_descricao": "AT"
     }
 
     print("Limpando planilha e preenchendo novos dados...")
@@ -93,7 +95,7 @@ def preencher_planilha(dados, caminho_arquivo):
     for chave, lista in tqdm(dados.items(), desc="Preenchendo planilha"):
         coluna = mapeamento_colunas.get(chave)
         if coluna is not None:
-            for j, valor in enumerate(lista, start=2):
+            for j, valor in enumerate(lista, start=1):
                 aba_dados[f"{coluna}{j}"] = valor
 
     nome_aba_planilha = "Cadastro de Produtos"
@@ -136,15 +138,35 @@ def preencher_planilha(dados, caminho_arquivo):
         aba_planilha.add_data_validation(dv)
         dv.add(aba_planilha[f"B{i}"])  # Aplica a validação na célula B{i}
 
-    # Adicionando validação na aba Cadastro de Seção (B7:B200)
     if "Cadastro de Seção" in wb.sheetnames:
         aba_secao = wb["Cadastro de Seção"]
         adicionar_validacao(aba_secao, "B7:B200", f"'Dados Consolidados'!$AR$2:$AR${len(dados['secao_completa'])}")
 
-    # Adicionando validação na aba Cadastro de Espécie (B7:B200)
     if "Cadastro de Espécie" in wb.sheetnames:
         aba_especie = wb["Cadastro de Espécie"]
         adicionar_validacao(aba_especie, "B7:B200", f"'Dados Consolidados'!$A$2:$A${len(dados['especie_completa'])}")
+
+    """if "Cadastro de Marcas" in wb.sheetnames:
+        aba_marcas = wb["Cadastro de Marcas"]
+        adicionar_validacao(aba_marcas, "A7:A200", "ÉERRO(CORRESP($A7;'Dados Consolidados'!$AT$1:$AT$200;0))")
+
+    if "Cadastro de Segmento" in wb.sheetnames:
+        aba_segmento = wb["Cadastro de Segmento"]
+        
+        # Criar validação personalizada sem restringir a lista suspensa
+        formula = "=ISNA(CORRESP(A7; 'Dados Consolidados'!$AR$1:$AR$200; 0))"
+        
+        dv = DataValidation(type="custom", formula1=formula)
+        dv.error = "O valor digitado não existe na base de segmentos."
+        dv.errorTitle = "Valor Inválido"
+        dv.showErrorMessage = True
+
+        # Aplicar a validação a todas as células da coluna A (de A7 até A200)
+        aba_segmento.add_data_validation(dv)
+        for linha in aba_segmento["A7:A200"]:
+            for celula in linha:
+                dv.add(celula)"""
+
 
     max_linhas = max(len(lista) for lista in dados.values()) + 10  
 
@@ -153,7 +175,7 @@ def preencher_planilha(dados, caminho_arquivo):
     print("Adicionando validação de dados gerais...\n")    
     for chave, coluna in tqdm(mapeamento_colunas.items(), desc="Validação"):
         if coluna in colunas_com_validacao and chave in dados:  
-            adicionar_validacao(aba_planilha, f"{coluna}7:{coluna}{max_linhas}", f"'{nome_aba_dados}'!${coluna}$2:${coluna}${len(dados[chave])}")
+            adicionar_validacao(aba_planilha, f"{coluna}7:{coluna}{max_linhas}", f"'{nome_aba_dados}'!${coluna}$1:${coluna}${len(dados[chave])}")
 
     wb.save(caminho_arquivo_novo)
     
@@ -171,7 +193,5 @@ caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
 if not os.path.exists(caminho_arquivo):
     print(f"Arquivo não encontrado: {caminho_arquivo}")
     exit()
-
-dados = dados_necessarios()
 
 print("Dados preenchidos com sucesso e a planilha original foi excluída.")

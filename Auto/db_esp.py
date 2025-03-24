@@ -12,7 +12,7 @@ def get_connection(driver='SQL Server Native Client 11.0', server='localhost', d
 def selecionar_arquivo():
     root = tk.Tk()
     root.withdraw()
-    arquivo_path = filedialog.askopenfilename(title="Selecione o arquivo Excel", filetypes=[("Arquivos Excel", "*.xlsx;*.xls")])
+    arquivo_path = filedialog.askopenfilename(title="Selecione o arquivo Excel", filetypes=[("Arquivos Excel", "*.xlsx;*.xls;*.xlsm")])
     return arquivo_path
 
 caminho_arquivo = selecionar_arquivo()

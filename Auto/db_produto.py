@@ -75,8 +75,19 @@ else:
             marca = int(df.iloc[x, 26]) if not pd.isna(df.iloc[x, 26]) else None
 
             referencia = str(df.iloc[x, 5]) if pd.notna(df.iloc[x, 5]) else None
-            #cod_original = int(df.iloc[x, 6]) if pd.notna(df.iloc[x, 6]) else None
-            cod_original = None
+            
+            if pd.notna(df.iloc[x, 6]):
+                cod_original = str(df.iloc[x, 6])
+            else:
+                cursor.execute("SELECT MAX(prd_codigo_original) FROM tb_produto WHERE sec_codigo = ? and esp_codigo = ?", secao, especie)
+                resultado = cursor.fetchone()
+                maior_cod_original = resultado[0] if resultado[0] is not None else None
+                
+                if maior_cod_original is None:
+                    cod_original = 1
+                else:
+                    cod_original = maior_cod_original + 1
+
             comprador = int(df.iloc[x, 27]) if pd.notna(df.iloc[x, 27]) else None
             ativo = 1
             unidade = str(df.iloc[x, 9]) if pd.notna(df.iloc[x, 9]) else None
@@ -87,7 +98,12 @@ else:
             ipi = float(df.iloc[x, 14]) if pd.notna(df.iloc[x, 14]) else None
             etiqueta = int(df.iloc[x, 30]) if pd.notna(df.iloc[x, 30]) else None
             data = datetime.now()
-            prd_codigo = None
+            
+            cursor.execute("SELECT MAX(prd_codigo) FROM tb_produto WHERE sec_codigo = ? AND esp_codigo = ?", secao, especie)
+            resultado = cursor.fetchone()
+            maior_prd_codigo = resultado[0] if resultado[0] is not None else 0
+            prd_codigo = maior_prd_codigo + 1
+
             prd_data_ultima_compra = None
             prd_data_ultima_entrega = None
             prd_custo_medio = 0

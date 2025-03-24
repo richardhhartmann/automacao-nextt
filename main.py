@@ -1,10 +1,10 @@
-from db_conn import preencher_planilha, dados_necessarios
-from db_module import importar_modulo_vba
+from Auto.db_conn import preencher_planilha, dados_necessarios
+from Auto.db_module import importar_modulo_vba
 import os
 
 caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
 caminho_novo_arquivo = 'Cadastros Auto Nextt.xlsx'
-modulos_vba = ["CriarIntervalosNomeadosB.bas", "ValidarCamposCadastro.bas"]
+modulos_vba = [r"Module\CriarIntervalosNomeadosB.bas", r"Module\ValidarCamposCadastro.bas"]
 
 if not os.path.exists(caminho_arquivo):
     print(f"Arquivo não encontrado: {caminho_arquivo}")
