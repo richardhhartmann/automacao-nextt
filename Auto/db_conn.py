@@ -37,7 +37,10 @@ def dados_necessarios():
         "classificacao_completa": "SELECT CONCAT(MIN(clf_codigo_fiscal), ' - ', clf_descricao) AS descricao_completa FROM tb_classificacao_fiscal WHERE clf_ativo = 1 GROUP BY clf_descricao ORDER BY descricao_completa ASC",
         "seg_codigo": "SELECT seg_codigo FROM tb_segmento",
         "segmento_completo": "SELECT seg_descricao FROM tb_segmento",
-        "marca_descricao": "SELECT mar_descricao from tb_marca"
+        "marca_descricao": "SELECT mar_descricao from tb_marca",
+        "referencia_descricao": "SELECT prd_referencia_fornec FROM tb_produto",
+        "secao_descricao": "SELECT sec_descricao FROM tb_secao",
+        "especie_descricao": "SELECT LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))) AS descricao FROM tb_especie"
     }
 
     resultados = {}
@@ -84,7 +87,10 @@ def preencher_planilha(dados, caminho_arquivo):
         "etiqueta_completa": "P",
         "segmento_completo": "AR",
         "seg_codigo": "AS",
-        "marca_descricao": "AT"
+        "marca_descricao": "AT",
+        "referencia_descricao": "AU",
+        "secao_descricao": "AV",
+        "especie_descricao": "AW"
     }
 
     print("Limpando planilha e preenchendo novos dados...")
@@ -136,37 +142,15 @@ def preencher_planilha(dados, caminho_arquivo):
         dv.showErrorMessage = True
         
         aba_planilha.add_data_validation(dv)
-        dv.add(aba_planilha[f"B{i}"])  # Aplica a validação na célula B{i}
+        dv.add(aba_planilha[f"B{i}"])
 
     if "Cadastro de Seção" in wb.sheetnames:
         aba_secao = wb["Cadastro de Seção"]
-        adicionar_validacao(aba_secao, "B7:B200", f"'Dados Consolidados'!$AR$2:$AR${len(dados['secao_completa'])}")
+        adicionar_validacao(aba_secao, "B7:B200", f"'Dados Consolidados'!$AR$1:$AR${len(dados['secao_completa'])}")
 
     if "Cadastro de Espécie" in wb.sheetnames:
         aba_especie = wb["Cadastro de Espécie"]
-        adicionar_validacao(aba_especie, "B7:B200", f"'Dados Consolidados'!$A$2:$A${len(dados['especie_completa'])}")
-
-    """if "Cadastro de Marcas" in wb.sheetnames:
-        aba_marcas = wb["Cadastro de Marcas"]
-        adicionar_validacao(aba_marcas, "A7:A200", "ÉERRO(CORRESP($A7;'Dados Consolidados'!$AT$1:$AT$200;0))")
-
-    if "Cadastro de Segmento" in wb.sheetnames:
-        aba_segmento = wb["Cadastro de Segmento"]
-        
-        # Criar validação personalizada sem restringir a lista suspensa
-        formula = "=ISNA(CORRESP(A7; 'Dados Consolidados'!$AR$1:$AR$200; 0))"
-        
-        dv = DataValidation(type="custom", formula1=formula)
-        dv.error = "O valor digitado não existe na base de segmentos."
-        dv.errorTitle = "Valor Inválido"
-        dv.showErrorMessage = True
-
-        # Aplicar a validação a todas as células da coluna A (de A7 até A200)
-        aba_segmento.add_data_validation(dv)
-        for linha in aba_segmento["A7:A200"]:
-            for celula in linha:
-                dv.add(celula)"""
-
+        adicionar_validacao(aba_especie, "B7:B200", f"'Dados Consolidados'!$A$1:$A${len(dados['especie_completa'])}")
 
     max_linhas = max(len(lista) for lista in dados.values()) + 10  
 
@@ -194,4 +178,4 @@ if not os.path.exists(caminho_arquivo):
     print(f"Arquivo não encontrado: {caminho_arquivo}")
     exit()
 
-print("Dados preenchidos com sucesso e a planilha original foi excluída.")
+print("Dados preenchidos com sucesso.")
