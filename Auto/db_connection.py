@@ -56,11 +56,9 @@ def dados_necessarios():
     return resultados
 
 def preencher_planilha(dados, caminho_arquivo):
-    # Cria uma cópia da planilha original, renomeando para 'Cadastros Auto Nextt.xlsx'
     caminho_arquivo_novo = caminho_arquivo.replace("Cadastros Auto Nextt limpa", "Cadastros Auto Nextt")
     shutil.copy(caminho_arquivo, caminho_arquivo_novo)
 
-    # Agora, vamos preencher a nova planilha copiada
     inicio = time.time()
     wb = openpyxl.load_workbook(caminho_arquivo_novo)
     
@@ -110,13 +108,8 @@ def preencher_planilha(dados, caminho_arquivo):
     else:
         aba_planilha = wb.create_sheet(title=nome_aba_planilha)
 
-    empresa_nome = dados.get("empresa_nome")[0]
-    aba_planilha['A2'] = f"Cadastro de Produtos {empresa_nome}"
-    print(f"\nDefinindo nome da empresa '{empresa_nome}' em: '{aba_planilha.title}'\n")
-
     wb.save(caminho_arquivo_novo)
 
-    # Função de adicionar validação
     def adicionar_validacao(aba, intervalo_celulas, referencia_dados):
 
         dv = DataValidation(type="list", formula1=referencia_dados, showDropDown=False)
@@ -124,16 +117,13 @@ def preencher_planilha(dados, caminho_arquivo):
         dv.errorTitle = "Valor Inválido"
         dv.showErrorMessage = True
 
-        # Aplicar validação às células do intervalo
         aba.add_data_validation(dv)
         for linha in aba[intervalo_celulas]:
             for celula in linha:
                 dv.add(celula)
 
-    # Atualizando a validação de dados na coluna B com a fórmula dinâmica
     print("Atualizando validação de dados na coluna B...")
     for i in range(7, aba_planilha.max_row + 1):
-        # A fórmula agora usa a referência indireta à célula da coluna Y para a validação
         formula = f'=INDIRECT("\'Dados Consolidados\'!SecaoCompleta" & Y{i})'
         
         dv = DataValidation(type="list", formula1=formula, showDropDown=False)
@@ -146,11 +136,15 @@ def preencher_planilha(dados, caminho_arquivo):
 
     if "Cadastro de Seção" in wb.sheetnames:
         aba_secao = wb["Cadastro de Seção"]
-        adicionar_validacao(aba_secao, "B7:B200", f"'Dados Consolidados'!$AR$1:$AR${len(dados['secao_completa'])}")
+        adicionar_validacao(aba_secao, "B7:B200", f"'Dados Consolidados'!$AR$1:$AR$10000")
 
     if "Cadastro de Espécie" in wb.sheetnames:
         aba_especie = wb["Cadastro de Espécie"]
-        adicionar_validacao(aba_especie, "B7:B200", f"'Dados Consolidados'!$A$1:$A${len(dados['especie_completa'])}")
+        adicionar_validacao(aba_especie, "B7:B200", f"'Dados Consolidados'!$A$1:$A$10000")
+
+    if "Cadastro de Produtos" in wb.sheetnames:
+        aba_planilha = wb["Cadastro de Produtos"]
+        adicionar_validacao(aba_planilha, "L7:L200", f"'Dados Consolidados'!$L$1:$L${aba_dados.max_row}")
 
     max_linhas = max(len(lista) for lista in dados.values()) + 10  
 
@@ -171,6 +165,28 @@ def preencher_planilha(dados, caminho_arquivo):
         print(f"Tempo total para preencher planilha: {minutos} minutos e {segundos:.0f} segundos\n")
     else:
         print(f"Tempo total para preencher planilha: {tempo_total:.0f} segundos\n")
+
+    empresa_nome = dados.get("empresa_nome")[0]
+
+    abas = [
+        "Cadastro de Produtos",
+        "Cadastro de Pedidos",
+        "Cadastro de Marcas",
+        "Cadastro de Segmento",
+        "Cadastro de Seção",
+        "Cadastro de Espécie"
+    ]
+
+    for aba_nome in abas:
+        try:
+            aba_planilha = wb[aba_nome]
+
+            aba_planilha['A2'] = f"Cadastro de {aba_nome.split(' ')[2]} {empresa_nome}"
+
+        except KeyError:
+            print(f"A aba '{aba_nome}' não foi encontrada.")
+
+    wb.save(caminho_arquivo_novo)
 
 caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
 

@@ -1,4 +1,4 @@
-from Auto.db_conn import preencher_planilha, dados_necessarios
+from Auto.db_connection import preencher_planilha, dados_necessarios
 from Auto.db_module import importar_modulo_vba
 import os
 
@@ -11,7 +11,16 @@ modulos_vba = [
     "cadastro_de_marcas.bas",
     "cadastro_de_segmento.bas",
     "cadastro_de_secao.bas",
-    "cadastro_de_especie.bas"
+    "cadastro_de_especie.bas",
+    "db_AtualizarDadosConsolidados.bas",
+    "db_cadastro_de_especie.bas",
+    "db_cadastro_de_secao.bas",
+    "db_cadastro_de_segmento.bas",
+    "db_cadastro_de_marca.bas",
+    "db_ExecutarCadastroEspecie.bas",
+    "db_ExecutarCadastroSecao.bas",
+    "db_ExecutarCadastroSegmento.bas",
+    "db_ExecutarCadastroMarca.bas"
 ]
 
 if not os.path.exists(caminho_arquivo):

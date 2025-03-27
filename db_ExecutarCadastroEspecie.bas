@@ -1,7 +1,7 @@
-Attribute VB_Name = "Módulo4"
+Attribute VB_Name = "db_ExecutarCadastroEspecie"
 Sub ExecutarCadastroEspecie()
     Call cadastro_de_especie
-    Call AtualizarDadosConsolidadosEspecie
+    Call AtualizarDadosConsolidados
     Call CriarIntervalosNomeadosB
 End Sub
 

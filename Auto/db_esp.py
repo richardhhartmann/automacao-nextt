@@ -23,12 +23,10 @@ else:
 
 print(f"Usando o arquivo: {caminho_arquivo}")
 
-# Conectar ao banco de dados
 connection, cursor = get_connection()
 
 try:
     print("Lendo dados do Excel...")
-    # Lendo os dados do Excel
     df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Espécie", skiprows=5, usecols="A,C")
     df.columns = ['descricao', 'sec_codigo']
 
