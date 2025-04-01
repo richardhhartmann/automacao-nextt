@@ -4,8 +4,38 @@ import pyodbc
 import time
 import pythoncom
 import json
+import openpyxl
+from openpyxl.drawing.image import Image
 
 caminho_parametros = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'conexao_temp.txt')
+
+def adicionar_imagens(caminho_arquivo):
+    """ Adiciona as imagens nas células B2 e G10 da aba 'Nextt' """
+    try:
+        wb = openpyxl.load_workbook(caminho_arquivo)
+        aba = wb['Nextt']
+
+        caminho_imagem_brand = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'brand.png')
+        caminho_imagem_upload = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'upload.png')
+
+        if not os.path.exists(caminho_imagem_brand):
+            print(f"Erro: O arquivo de imagem 'brand.png' não foi encontrado.")
+            return
+        if not os.path.exists(caminho_imagem_upload):
+            print(f"Erro: O arquivo de imagem 'upload.png' não foi encontrado.")
+            return
+
+        img_brand = Image(caminho_imagem_brand)
+        img_upload = Image(caminho_imagem_upload)
+
+        aba.add_image(img_brand, 'B2')
+        aba.add_image(img_upload, 'G10')
+
+        wb.save(caminho_arquivo)
+        print("Imagens inseridas com sucesso!")
+
+    except Exception as e:
+        print(f"Erro ao adicionar as imagens: {e}")
 
 def carregar_parametros_conexao_arquivo():
     """Carrega os parâmetros de conexão do arquivo 'conexao_temp.txt'."""
@@ -42,7 +72,6 @@ def obter_nome_empresa():
     except Exception as e:
         print(f"Erro ao buscar o nome da empresa: {e}")
         return "Erro"
-
 
 def converter_xlsx_para_xlsm(caminho_xlsx, nome_empresa):
     """ Converte um arquivo .xlsx para .xlsm, incluindo o nome da empresa no nome do arquivo. """
@@ -101,7 +130,7 @@ def importar_codigo_para_aba(wb, nome_aba, caminho_codigo):
         print(f"Erro ao importar código para aba '{nome_aba}': {e}")
         return False
 
-def importar_modulo_vba(caminho_arquivo, modulos_vba):
+def importar_modulo_vba(caminho_arquivo, modulos_vba, caminho_novo_arquivo):
     """ Importa módulos VBA para a planilha convertida. """
     nome_empresa = obter_nome_empresa()
     caminho_planilha_xlsm = converter_xlsx_para_xlsm(caminho_arquivo, nome_empresa)
@@ -161,6 +190,7 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba):
 
         adicionar_referencia_vba(os.path.abspath(caminho_planilha_xlsm))
         apagar_arquivo((os.path.abspath(caminho_arquivo)))
+        #adicionar_imagens(os.path.abspath(caminho_planilha_xlsm))
         encerrar_processos_excel()
 
         print("Salvando e fechando a planilha...")

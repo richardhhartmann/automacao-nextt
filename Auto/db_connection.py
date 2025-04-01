@@ -11,7 +11,6 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from tqdm import tqdm
 
 def get_connection_from_file(file_name='conexao_temp.txt'):
-    """Lê o arquivo JSON e cria uma conexão com o banco de dados."""
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         

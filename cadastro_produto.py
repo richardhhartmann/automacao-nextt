@@ -94,6 +94,9 @@ def cadastrar_produto():
             total_itens = len(df)
 
             for x in range(len(df)):
+                if df.iloc[x, 32] != "OK":
+                    continue
+                
                 secao = int(df.iloc[x, 24]) if not pd.isna(df.iloc[x, 24]) else None
                 especie = int(df.iloc[x, 25]) if not pd.isna(df.iloc[x, 25]) else None
 

@@ -18,9 +18,18 @@ Private Sub Worksheet_Change(ByVal Target As Range)
             Exit Sub
         End If
     End If
+    
+    If Not Intersect(Target, Me.Range("A7:A200, B7:B200, Y7:Y200, Z7:Z200")) Is Nothing Then
+        Application.EnableEvents = False 
+        Call VerificarSecaoCompleta.VerificarSecaoCompleta 
+        Application.EnableEvents = True
+    End If
 
-    Set rng = Union(Me.Range("C7:C200"), Me.Range("D7:D200"), Me.Range("F7:F200"), _
-                    Me.Range("L7:L200"), Me.Range("M7:M200"), Me.Range("N7:N200"), Me.Range("O7:O200"))
+    Set rng = Union(Me.Range("C7:C200"), _
+                    Me.Range("D7:D200"), Me.Range("F7:F200"), Me.Range("E7:E200"), _
+                    Me.Range("F7:F200"), Me.Range("H7:H200"), Me.Range("J7:J200"), _
+                    Me.Range("K7:K200"), Me.Range("L7:L200"), Me.Range("M7:M200"), _
+                    Me.Range("N7:N200"), Me.Range("O7:O200"), Me.Range("P7:P200"))
 
     Application.EnableEvents = False
 
@@ -36,3 +45,5 @@ Private Sub Worksheet_Change(ByVal Target As Range)
 
     Application.EnableEvents = True
 End Sub
+
+
