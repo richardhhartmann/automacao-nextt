@@ -1,0 +1,8 @@
+{
+    "driver": "SQL Server Native Client 11.0",
+    "server": "localhost",
+    "database": "NexttLoja",
+    "username": "sa",
+    "password": "",
+    "trusted_connection": "yes"
+}

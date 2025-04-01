@@ -5,19 +5,46 @@ import shutil
 import win32com.client as win32
 import winreg as reg
 import time
+import json
+import sys
 from openpyxl.worksheet.datavalidation import DataValidation
 from tqdm import tqdm
 
-def get_connection(driver='SQL Server Native Client 11.0', server='localhost', database='NexttLoja', username='sa', password=None, trusted_connection='yes'):
-    string_connection = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password};Trusted_Connection={trusted_connection}"
-    connection = pyodbc.connect(string_connection)
-    cursor = connection.cursor()
-    return connection, cursor
+def get_connection_from_file(file_name='conexao_temp.txt'):
+    """Lê o arquivo JSON e cria uma conexão com o banco de dados."""
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        file_path = os.path.join(script_dir, '..', file_name)
+        
+        with open(file_path, 'r') as f:
+            config = json.load(f)
 
-def dados_necessarios():
+        driver = config.get('driver', None)
+        server = config.get('server', None)
+        database = config.get('database', None)
+        username = config.get('username', None)
+        password = config.get('password', None)
+        trusted_connection = config.get('trusted_connection', None)
+
+        if trusted_connection.lower() == 'yes':
+            string_connection = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};Trusted_Connection={trusted_connection}"
+        else:
+            string_connection = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};UID={username};PWD={password};"
+
+        connection = pyodbc.connect(string_connection)
+        cursor = connection.cursor()
+
+        return connection, cursor
+
+    except Exception as e:
+        print(f"Erro ao conectar ao banco de dados: {e}")
+        sys.exit(1)
+
+def dados_necessarios(caminho_arquivo):
     print(f"Adicionando informações à planilha: {caminho_arquivo}")
     inicio = time.time()
-    connection, cursor = get_connection()
+    connection, cursor = get_connection_from_file('conexao_temp.txt')
 
     consultas = {
         "sec_codigo": "SELECT sec_codigo FROM tb_secao",
@@ -56,6 +83,7 @@ def dados_necessarios():
     return resultados
 
 def preencher_planilha(dados, caminho_arquivo):
+    
     caminho_arquivo_novo = caminho_arquivo.replace("Cadastros Auto Nextt limpa", "Cadastros Auto Nextt")
     shutil.copy(caminho_arquivo, caminho_arquivo_novo)
 
@@ -122,7 +150,7 @@ def preencher_planilha(dados, caminho_arquivo):
             for celula in linha:
                 dv.add(celula)
 
-    print("Atualizando validação de dados na coluna B...")
+    print("Atualizando validação de dados para espécies...")
     for i in range(7, aba_planilha.max_row + 1):
         formula = f'=INDIRECT("\'Dados Consolidados\'!SecaoCompleta" & Y{i})'
         
@@ -193,5 +221,3 @@ caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
 if not os.path.exists(caminho_arquivo):
     print(f"Arquivo não encontrado: {caminho_arquivo}")
     exit()
-
-print("Dados preenchidos com sucesso.")

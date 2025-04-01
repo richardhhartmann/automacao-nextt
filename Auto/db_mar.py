@@ -1,15 +1,36 @@
 import pandas as pd
 import pyodbc
+import json
 import os
 import sys
 
-def get_connection(driver='SQL Server Native Client 11.0', server='localhost', database='NexttLoja', username='sa', password=None, trusted_connection='yes'):
-    """Cria e retorna uma conexão com o banco de dados."""
+def get_connection_from_file(file_name='conexao_temp.txt'):
+    """Lê o arquivo JSON e cria uma conexão com o banco de dados."""
     try:
-        string_connection = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password};Trusted_Connection={trusted_connection}"
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        file_path = os.path.join(script_dir, '..', file_name)
+        
+        with open(file_path, 'r') as f:
+            config = json.load(f)
+
+        driver = config.get('driver', None)
+        server = config.get('server', None)
+        database = config.get('database', None)
+        username = config.get('username', None)
+        password = config.get('password', None)
+        trusted_connection = config.get('trusted_connection', None)
+
+        if trusted_connection.lower() == 'yes':
+            string_connection = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};Trusted_Connection={trusted_connection}"
+        else:
+            string_connection = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};UID={username};PWD={password};"
+
         connection = pyodbc.connect(string_connection)
         cursor = connection.cursor()
+
         return connection, cursor
+
     except Exception as e:
         print(f"Erro ao conectar ao banco de dados: {e}")
         sys.exit(1)
@@ -23,7 +44,7 @@ else:
 
 print(f"Usando o arquivo: {caminho_arquivo}")
 
-connection, cursor = get_connection()
+connection, cursor = get_connection_from_file('conexao_temp.txt')
 
 try:
     df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Marcas", skiprows=5, usecols="A")

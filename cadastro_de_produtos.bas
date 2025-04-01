@@ -5,8 +5,11 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Dim rng As Range
 
     If Not Intersect(Target, Me.Range("F7:F200")) Is Nothing Then
+        If Trim(Target.Value) = "" Then Exit Sub
+
         Set CheckRange = Worksheets("Dados Consolidados").Range("AU1:AU100000")
         Set FoundCell = CheckRange.Find(Target.Value, LookIn:=xlValues)
+
         If Not FoundCell Is Nothing Then
             MsgBox "O valor ja existe no banco de dados.", vbExclamation
             Application.EnableEvents = False
@@ -23,7 +26,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
 
     For Each cel In rng
         If Not Intersect(Target, cel) Is Nothing Then
-            If cel.Value = "" Then
+            If Trim(cel.Value) = "" Then
                 MsgBox "A celula nao pode ficar vazia apos ser editada.", vbExclamation, "Erro"
                 Application.Undo
                 Exit For

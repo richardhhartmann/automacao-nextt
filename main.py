@@ -1,6 +1,14 @@
+import tkinter as tk
+import json
+import time
+import threading
+import sys
+from io import StringIO
+from tkinter import font, Toplevel
+from PIL import Image, ImageTk
 from Auto.db_connection import preencher_planilha, dados_necessarios
 from Auto.db_module import importar_modulo_vba
-import os
+from cadastro_produto import cadastrar_produto
 
 caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
 caminho_novo_arquivo = 'Cadastros Auto Nextt.xlsx'
@@ -23,27 +31,187 @@ modulos_vba = [
     "db_ExecutarCadastroMarca.bas"
 ]
 
-if not os.path.exists(caminho_arquivo):
-    print(f"Arquivo não encontrado: {caminho_arquivo}")
-    exit()
+# Captura das saídas do terminal
+class OutputRedirector:
+    def __init__(self, text_widget):
+        self.text_widget = text_widget
+    
+    def write(self, message):
+        self.text_widget.insert(tk.END, message)
+        self.text_widget.yview(tk.END)  # Desce a barra de rolagem para o final
+        loading_window.update()  # Atualiza a janela
 
-dados = dados_necessarios()
+    def flush(self):
+        pass  # Necessário para compatibilidade, mas não precisa fazer nada
+
+def atualizar_status(mensagem):
+    """Atualiza o texto da label de status com a mensagem passada."""
+    label_status.config(text=mensagem)
+    root.update()  # Atualiza a interface para exibir a nova mensagem
+
+def mostrar_janela_carregamento():
+    """Cria e exibe a janela de carregamento com animação de texto."""
+    global loading_window, label_loading, animando, text_output, output_redirector
+    animando = True  # Define que a animação está em andamento
+    
+    # Cria a janela de carregamento
+    loading_window = Toplevel(root)
+    loading_window.title("Processando...")
+    loading_window.geometry("400x200")
+    loading_window.resizable(False, False)
+    
+    # Label que vai exibir o texto na janela de carregamento
+    label_loading = tk.Label(loading_window, text="Processando... Aguarde.", font=("Arial", 12))
+    label_loading.pack(pady=10)
+    
+    # Widget de Text para mostrar as prints
+    text_output = tk.Text(loading_window, width=45, height=6, wrap=tk.WORD, font=("Arial", 10))
+    text_output.pack(pady=10)
+
+    # Direciona a saída do terminal para o widget Text
+    output_redirector = OutputRedirector(text_output)
+    sys.stdout = output_redirector
+    
+    # Chama a função para atualizar o texto na janela de carregamento
+    threading.Thread(target=atualizar_texto_carregamento).start()
+
+def atualizar_texto_carregamento():
+    """Atualiza o texto da janela de carregamento com animação de pontinhos."""
+    pontos = "."
+    while animando:
+        label_loading.config(text="Processando" + pontos)
+        pontos = "." * (len(pontos) + 1) if len(pontos) < 4 else "."
+        time.sleep(0.5)
+        loading_window.after(0, loading_window.update)  # Chama a atualização no thread principal
+
+
+def fechar_janela_carregamento():
+    """Fecha a janela de carregamento e para a animação."""
+    global animando
+    animando = False  # Para a animação
+    loading_window.destroy()  # Fecha a janela de carregamento
 
 def main():
-    print("Preenchendo planilha...\n")
-
+    dados = dados_necessarios(caminho_arquivo)
+    
+    print("Preenchendo planilha...")  # Isso agora será exibido na janela de carregamento
     preencher_planilha(dados, caminho_arquivo)
-
-    print("Planilha preenchida com sucesso.\n")
     
-    print("Importando VBA...\n")
-
+    print("Planilha preenchida com sucesso.")  # Isso também será exibido
     importar_modulo_vba(caminho_novo_arquivo, modulos_vba)
-
-    print("VBA importado com sucesso.\n")
-
-    print("Dados preenchidos com sucesso.")
     
-    return
+    print("VBA importado com sucesso.")  # E isso também
+    print("Processo concluído com sucesso.")
+    
+    fechar_janela_carregamento()
 
-main()
+    root.destroy()
+
+def exportar_conexao():
+    
+    mostrar_janela_carregamento()
+    
+    """Função executada quando o botão é pressionado"""
+    driver = entry_driver.get().strip()
+    server = entry_server.get().strip()
+    database = entry_database.get().strip()
+    username = entry_username.get().strip()
+    password = entry_password.get().strip()
+    trusted_connection = "yes" if var_trusted_connection.get() else "no"
+
+    if not all([driver, server, database]):
+        label_status.config(text="Preencha todos os campos obrigatórios!", fg="red")
+        return
+
+    dados_conexao = {
+    "driver": driver,
+    "server": server,
+    "database": database,
+    "username": username,
+    "password": password,
+    "trusted_connection": trusted_connection
+}
+
+    try:
+        with open('conexao_temp.txt', 'w') as f:
+            json.dump(dados_conexao, f, indent=4)
+
+        print("\nConfiguração exportada com sucesso!")  # Isso vai para a janela de carregamento
+        label_status.config(text="Configuração salva com sucesso!", fg="green")
+
+        root.after(100, main)
+
+    except Exception as e:
+        fechar_janela_carregamento()
+        print(f"Erro ao salvar conexão: {e}")  # E isso também
+        label_status.config(text=f"Erro ao salvar: {str(e)}", fg="red")
+
+def importar():
+    root.after(100, lambda: (cadastrar_produto()))
+
+root = tk.Tk()
+root.title("Conexão Banco de Dados")
+root.geometry("400x450")
+root.resizable(False, False)
+
+root.columnconfigure(0, weight=1)
+root.columnconfigure(1, weight=1)
+
+image_path = "brand.png"
+icon_img = ImageTk.PhotoImage(file="brand-ico.ico")
+
+root.iconphoto(True, icon_img)
+
+try:
+    img = Image.open(image_path)
+    img = ImageTk.PhotoImage(img)
+    label_img = tk.Label(root, image=img)
+    label_img.grid(row=0, column=0, columnspan=2, pady=(10, 5), sticky="n")
+except Exception as e:
+    print(f"Erro ao carregar a imagem: {e}")
+
+custom_font = font.Font(family="Arial", size=12, weight="bold")
+label_text = tk.Label(root, text="Cadastro em Lotes Automatizado | Demo", font=custom_font)
+label_text.grid(row=1, column=0, columnspan=2, pady=(0, 10), sticky="n")
+
+tk.Label(root, text="Driver:").grid(row=2, column=0, padx=10, pady=5, sticky="e")
+entry_driver = tk.Entry(root, width=30)
+entry_driver.grid(row=2, column=1, padx=10, pady=5, sticky="w")
+entry_driver.insert(0, "SQL Server Native Client 11.0")
+
+tk.Label(root, text="Servidor:").grid(row=3, column=0, padx=10, pady=5, sticky="e")
+entry_server = tk.Entry(root, width=30)
+entry_server.grid(row=3, column=1, padx=10, pady=5, sticky="w")
+entry_server.insert(0, "localhost")
+
+tk.Label(root, text="Banco de Dados:").grid(row=4, column=0, padx=10, pady=5, sticky="e")
+entry_database = tk.Entry(root, width=30)
+entry_database.grid(row=4, column=1, padx=10, pady=5, sticky="w")
+entry_database.insert(0, "NexttLoja")
+
+tk.Label(root, text="Usuário:").grid(row=5, column=0, padx=10, pady=5, sticky="e")
+entry_username = tk.Entry(root, width=30)
+entry_username.grid(row=5, column=1, padx=10, pady=5, sticky="w")
+entry_username.insert(0, "sa")
+
+tk.Label(root, text="Senha:").grid(row=6, column=0, padx=10, pady=5, sticky="e")
+entry_password = tk.Entry(root, width=30, show="*")
+entry_password.grid(row=6, column=1, padx=10, pady=5, sticky="w")
+
+var_trusted_connection = tk.BooleanVar(value=True)
+checkbutton_trusted_connection = tk.Checkbutton(root, text="Trusted Connection", variable=var_trusted_connection)
+checkbutton_trusted_connection.grid(row=7, column=0, columnspan=2, pady=10)
+
+frame_buttons = tk.Frame(root)
+frame_buttons.grid(row=8, column=0, columnspan=2, pady=15) 
+
+btn_exportar = tk.Button(frame_buttons, text="Exportar", width=12, height=2, command=exportar_conexao)
+btn_exportar.grid(row=0, column=0, padx=10)  
+
+btn_importar = tk.Button(frame_buttons, text="Importar", width=12, height=2, command=importar)
+btn_importar.grid(row=0, column=1, padx=10)  
+
+label_status = tk.Label(root, text="", font=("Arial", 10))
+label_status.grid(row=9, column=0, columnspan=2, pady=(10, 0))
+
+root.mainloop()

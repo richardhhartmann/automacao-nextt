@@ -2,14 +2,38 @@ import win32com.client
 import os
 import pyodbc
 import time
+import pythoncom
+import json
+
+caminho_parametros = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'conexao_temp.txt')
+
+def carregar_parametros_conexao_arquivo():
+    """Carrega os parâmetros de conexão do arquivo 'conexao_temp.txt'."""
+    if not os.path.exists(caminho_parametros):
+        raise FileNotFoundError(f"Arquivo de conexão não encontrado: {caminho_parametros}")
+
+    with open(caminho_parametros, "r") as f:
+        return json.load(f)
 
 def obter_nome_empresa():
-    """ Obtém o nome da empresa do banco de dados. """
+    """Obtém o nome da empresa do banco de dados usando os parâmetros do arquivo de conexão 'conexao_temp.txt'."""
     try:
-        conexao = pyodbc.connect(
-            "DRIVER=SQL Server Native Client 11.0;SERVER=localhost;DATABASE=NexttLoja;UID=sa;PWD=;Trusted_Connection=yes"
+        parametros = carregar_parametros_conexao_arquivo()
+        
+        string_connection = (
+            f"DRIVER={parametros['driver']};"
+            f"SERVER={parametros['server']};"
+            f"DATABASE={parametros['database']};"
         )
+        
+        if parametros["trusted_connection"].lower() == "yes":
+            string_connection += "Trusted_Connection=yes;"
+        else:
+            string_connection += f"UID={parametros['username']};PWD={parametros['password']};"
+
+        conexao = pyodbc.connect(string_connection)
         cursor = conexao.cursor()
+        
         cursor.execute("SELECT emp_descricao FROM tb_empresa")
         resultado = cursor.fetchone()
         conexao.close()
@@ -18,6 +42,7 @@ def obter_nome_empresa():
     except Exception as e:
         print(f"Erro ao buscar o nome da empresa: {e}")
         return "Erro"
+
 
 def converter_xlsx_para_xlsm(caminho_xlsx, nome_empresa):
     """ Converte um arquivo .xlsx para .xlsm, incluindo o nome da empresa no nome do arquivo. """
@@ -111,6 +136,10 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba):
                 caminho_completo = os.path.abspath(nome_arquivo)
                 importar_codigo_para_aba(wb, nome_aba, caminho_completo)
 
+        json_converter_path = os.path.abspath(os.path.join("VBA-JSON-master", "JsonConverter.bas"))
+        if os.path.exists(json_converter_path):
+            modulos_vba.append(json_converter_path)
+
         for modulo in modulos_vba:
             if modulo not in mapeamento_abas.values():
                 try:
@@ -130,21 +159,29 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba):
         print("Criando botões e atribuindo macros...")
         criar_botoes_e_atribuir_macros(wb)
 
+        adicionar_referencia_vba(os.path.abspath(caminho_planilha_xlsm))
+        apagar_arquivo((os.path.abspath(caminho_arquivo)))
+        encerrar_processos_excel()
+
         print("Salvando e fechando a planilha...")
         wb.Save()
         wb.Close()
 
-        apagar_arquivo(caminho_arquivo)
-
         print("Processo concluído com sucesso!")
     except Exception as e:
-        print(f"Erro durante o processo de importação: {e}")
+        None
     finally:
-        print("Encerrando o Excel...")
-        excel.Quit()
-
-import win32com.client
-
+        try: 
+            if wb is not None:
+                print("Encerrando o Excel...")
+                wb.Close(SaveChanges=False)
+                excel.Quit()
+                del excel
+                pythoncom.CoUninitialize()
+        except Exception as e:
+            None
+        
+        
 def criar_botoes_e_atribuir_macros(wb):
     """ Cria botões nas abas e atribui macros a eles. """
     try:
@@ -193,14 +230,58 @@ def criar_botoes_e_atribuir_macros(wb):
     except Exception as e:
         print(f"Erro ao criar botões e atribuir macros: {e}")
 
+def adicionar_referencia_vba(caminho_arquivo):
+
+    excel = win32com.client.Dispatch("Excel.Application")
+    excel.Visible = False  
+
+    wb = excel.Workbooks.Open(caminho_arquivo)
+
+    vb_proj = wb.VBProject
+    vb_proj.References.AddFromFile("C:\\Windows\\System32\\scrrun.dll")
+
+    wb.Save()
+    wb.Close()
+    excel.Quit()
+    print("Referências adicionadas com sucesso!")
+
 def apagar_arquivo(caminho_arquivo):
     """ Remove o arquivo original após a conversão. """
     try:
         if os.path.exists(caminho_arquivo):
             print(f"Apagando o arquivo original: {caminho_arquivo}")
+            time.sleep(1)
             os.remove(caminho_arquivo)
             print("Arquivo original apagado com sucesso.")
         else:
             print(f"O arquivo {caminho_arquivo} não foi encontrado para exclusão.")
     except Exception as e:
         print(f"Erro ao excluir o arquivo: {e}")
+
+def encerrar_processos_excel():
+    """ Mata qualquer processo do Excel que esteja rodando em segundo plano. """
+    try:
+        os.system("taskkill /f /im excel.exe")
+        print("Processos do Excel encerrados.")
+    except Exception as e:
+        print(f"Erro ao encerrar processos do Excel: {e}")
+
+"""caminho_novo_arquivo = 'Cadastros Auto Nextt.xlsx'
+modulos_vba = [
+    "CriarIntervalosNomeadosB.bas", 
+    "cadastro_de_produtos.bas",
+    "cadastro_de_marcas.bas",
+    "cadastro_de_segmento.bas",
+    "cadastro_de_secao.bas",
+    "cadastro_de_especie.bas",
+    "db_AtualizarDadosConsolidados.bas",
+    "db_cadastro_de_especie.bas",
+    "db_cadastro_de_secao.bas",
+    "db_cadastro_de_segmento.bas",
+    "db_cadastro_de_marca.bas",
+    "db_ExecutarCadastroEspecie.bas",
+    "db_ExecutarCadastroSecao.bas",
+    "db_ExecutarCadastroSegmento.bas",
+    "db_ExecutarCadastroMarca.bas"
+]
+importar_modulo_vba(caminho_novo_arquivo, modulos_vba)"""
