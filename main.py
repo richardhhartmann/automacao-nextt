@@ -307,7 +307,7 @@ checkbutton_trusted_connection.grid(row=7, column=0, columnspan=2, pady=10)
 frame_buttons = tk.Frame(root)
 frame_buttons.grid(row=8, column=0, columnspan=2, pady=15) 
 
-btn_exportar = tk.Button(frame_buttons, text="Exportar Planilha", width=15, height=2, command=exportar_conexao)
+btn_exportar = tk.Button(frame_buttons, text="Baixar Planilha", width=15, height=2, command=exportar_conexao)
 btn_exportar.grid(row=0, column=0, padx=10)  
 
 btn_importar = tk.Button(frame_buttons, text="Importar Planilha", width=15, height=2, command=importar)

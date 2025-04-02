@@ -11,7 +11,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         Set FoundCell = CheckRange.Find(Target.Value, LookIn:=xlValues)
 
         If Not FoundCell Is Nothing Then
-            MsgBox "O valor ja existe no banco de dados.", vbExclamation
+            MsgBox "O valor digitado ja existe no banco de dados. Tente novamente.", vbExclamation
             Application.EnableEvents = False
             Target.ClearContents
             Application.EnableEvents = True

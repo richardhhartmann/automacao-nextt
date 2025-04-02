@@ -55,7 +55,7 @@ Sub VerificarSecaoCompleta()
 
         If Not encontrado Then
             cel.Interior.Color = RGB(244, 204, 204)
-            MsgBox "Especie nao encontrada para esta secao, tente novamente.", vbExclamation, "Erro de Validação"
+            MsgBox "Especie nao encontrada para esta secao, tente novamente.", vbExclamation, "Erro de Validacao"
             cel.ClearContents 
             cel.Interior.ColorIndex = xlNone 
         End If
