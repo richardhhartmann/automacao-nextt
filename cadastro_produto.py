@@ -46,7 +46,7 @@ def selecionar_arquivo():
     arquivo_path = filedialog.askopenfilename(title="Selecione o arquivo Excel", filetypes=[("Arquivos Excel", "*.xlsx;*.xls;*.xlsm")])
     return arquivo_path
 
-def get_colunas_adicionais(ws, linha_cabecalho=3, coluna_inicial='Y'):
+def get_colunas_adicionais(ws, linha_cabecalho=3, coluna_inicial='Z'):
     """Retorna todas as colunas adicionais que possuem valores no cabeçalho"""
     colunas = []
     current_col_idx = column_index_from_string(coluna_inicial)
@@ -114,13 +114,14 @@ def cadastrar_produto():
         df['coluna59'] = pd.to_numeric(df['coluna59'], errors='coerce').fillna(0).astype('int16')
         df['coluna60'] = pd.to_numeric(df['coluna60'], errors='coerce').fillna(0).astype('int16')
         df['coluna61'] = pd.to_numeric(df['coluna61'], errors='coerce').fillna(0).astype('int16')
+        df['coluna62'] = pd.to_numeric(df['coluna62'], errors='coerce').fillna(0).astype('int16')
 
         duplicata = 0
         produtos_inseridos = 0
         variacoes_inseridas = 0
 
         for x in range(len(df)):
-            if df.iloc[x, 61] != "OK":
+            if df.iloc[x, 62] != "OK":
                 continue
             
             linha_excel = x + 7
@@ -133,16 +134,16 @@ def cadastrar_produto():
                 except:
                     return None
 
-            secao = trata_valor(df.iloc[x, 53])
-            especie = trata_valor(df.iloc[x, 54])
+            secao = trata_valor(df.iloc[x, 54])
+            especie = trata_valor(df.iloc[x, 55])
             descricao = str(df.iloc[x, 2])[:50] if pd.notna(df.iloc[x, 2]) else None
             descricao_reduzida = str(df.iloc[x, 3])[:50] if pd.notna(df.iloc[x, 3]) else None
-            marca = trata_valor(df.iloc[x, 55])
-            comprador = trata_valor(df.iloc[x, 56])
-            und_codigo = trata_valor(df.iloc[x, 57])
-            classificacao = trata_valor(df.iloc[x, 58])
-            origem = trata_valor(df.iloc[x, 59])
-            etiqueta = trata_valor(df.iloc[x, 60])
+            marca = trata_valor(df.iloc[x, 56])
+            comprador = trata_valor(df.iloc[x, 57])
+            und_codigo = trata_valor(df.iloc[x, 58])
+            classificacao = trata_valor(df.iloc[x, 59])
+            origem = trata_valor(df.iloc[x, 60])
+            etiqueta = trata_valor(df.iloc[x, 61])
 
             referencia = (str(int(df.iloc[x, 5])) if isinstance(df.iloc[x, 5], float) and df.iloc[x, 5].is_integer() else str(df.iloc[x, 5])) if pd.notna(df.iloc[x, 5]) else None
 
@@ -156,6 +157,9 @@ def cadastrar_produto():
             venda = float(str(df.iloc[x, 12]).replace(',', '.')) if pd.notna(df.iloc[x, 12]) else None
             icms = float(df.iloc[x, 13]) if pd.notna(df.iloc[x, 13]) else None
             ipi = float(df.iloc[x, 14]) if pd.notna(df.iloc[x, 14]) else None
+
+            ipr_codigo_barra = trata_valor(df.iloc[x, 16])
+
             data = datetime.now()
             
             cursor.execute("SELECT MAX(prd_codigo) FROM tb_produto WHERE sec_codigo = ? AND esp_codigo = ?", secao, especie)
@@ -231,7 +235,7 @@ def cadastrar_produto():
                 print(f"Colunas adicionais encontradas: {colunas_adicionais}")
                 wb.close()
 
-                colunas_adicionais = ['Y', 'Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 
+                colunas_adicionais = ['Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 
                 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR',
                 'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ']
 
@@ -248,11 +252,11 @@ def cadastrar_produto():
                         except pyodbc.IntegrityError as e:
                             print(f"  - Ignorado atributo duplicado: {idx} ({col}{linha_excel})")
 
-                tuplas = [
-                    ('Q', 'U'),  
+                tuplas = [  
                     ('R', 'V'),  
                     ('S', 'W'), 
-                    ('T', 'X') 
+                    ('T', 'X'),
+                    ('U', 'Y') 
                 ]
 
                 for i, (col_cor, col_tamanho) in enumerate(tuplas, start=1):
@@ -263,8 +267,8 @@ def cadastrar_produto():
                         cursor.execute("""
                             INSERT INTO tb_item_produto 
                             (sec_codigo, esp_codigo, prd_codigo, ipr_codigo, ipr_codigo_barra, ipr_preco_promocional, ipr_gtin)
-                            VALUES (?, ?, ?, ?, 0, 0, NULL)
-                        """, secao, especie, prd_codigo, i)
+                            VALUES (?, ?, ?, ?, ?, 0, NULL)
+                        """, secao, especie, prd_codigo, i, ipr_codigo_barra)
 
                         cursor.execute("""
                             INSERT INTO tb_atributo_item_produto 

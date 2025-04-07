@@ -11,7 +11,7 @@ Sub GerarFormulaDinamica()
     
     ultimaColuna = ws.Cells(4, ws.Columns.Count).End(xlToLeft).Column
     
-    Set rng = ws.Range("AG7:AG200")
+    Set rng = ws.Range("BK7:BK200")
     
     For linha = 7 To 200
         condicao = "SE(E("
@@ -28,7 +28,6 @@ Sub GerarFormulaDinamica()
         
         condicao = condicao & ");""OK"";""n/a"")"
 
-        ws.Cells(linha, 62).FormulaLocal = "=" & condicao
+        ws.Cells(linha, 63).FormulaLocal = "=" & condicao
     Next linha
 End Sub
-

@@ -18,11 +18,11 @@ Sub VerificarSecaoCompleta()
         
         If IsEmpty(cel.Value) Then GoTo ProximaCelula
         
-        nomeLista = "SecaoCompleta" & Trim(CStr(ws.Range("BB" & cel.Row).Value))
+        nomeLista = "SecaoCompleta" & Trim(CStr(ws.Range("BC" & cel.Row).Value))
         
         On Error Resume Next
-        valorProcurado = CLng(ws.Range("BC" & cel.Row).Value)
-        If Err.Number <> 0 Then valorProcurado = Trim(CStr(ws.Range("BC" & cel.Row).Value)) ' Se der erro, trata como texto
+        valorProcurado = CLng(ws.Range("BD" & cel.Row).Value)
+        If Err.Number <> 0 Then valorProcurado = Trim(CStr(ws.Range("BD" & cel.Row).Value)) ' Se der erro, trata como texto
         On Error GoTo 0
         
         If valorProcurado = "" Then GoTo ProximaCelula

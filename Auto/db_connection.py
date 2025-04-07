@@ -204,7 +204,7 @@ def preencher_planilha(dados, caminho_arquivo):
 
     print("Atualizando validação de dados para espécies...")
     for i in range(7, aba_planilha.max_row + 1):
-        formula = f'=INDIRECT("\'Dados Consolidados\'!SecaoCompleta" & BB{i})'
+        formula = f'=INDIRECT("\'Dados Consolidados\'!SecaoCompleta" & BC{i})'
         
         dv = DataValidation(type="list", formula1=formula, showDropDown=False)
         dv.error = "Por favor, selecione um valor da lista."
