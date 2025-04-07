@@ -22,7 +22,7 @@ Sub AtualizarDadosConsolidados()
 
     Set fso = CreateObject("Scripting.FileSystemObject")
     If Not fso.FileExists(caminhoArquivo) Then
-        MsgBox "Arquivo de conexão não encontrado!", vbExclamation
+        MsgBox "Arquivo de conexÃ£o nÃ£o encontrado!", vbExclamation
         Exit Sub
     End If
 
@@ -74,13 +74,13 @@ Sub AtualizarDadosConsolidados()
     On Error GoTo 0
 
     If conn Is Nothing Then
-        MsgBox "Erro: conexão não foi inicializada.", vbCritical
+        MsgBox "Erro: conexao nao foi inicializada.", vbCritical
         Exit Sub
     End If
 
     Set ws = ThisWorkbook.Sheets("Dados Consolidados")
     If ws Is Nothing Then
-        MsgBox "Erro: planilha 'Dados Consolidados' não encontrada.", vbCritical
+        MsgBox "Erro: planilha 'Dados Consolidados' nao encontrada.", vbCritical
         conn.Close
         Exit Sub
     End If
@@ -102,7 +102,7 @@ Sub AtualizarDadosConsolidados()
     AtualizarColunaComCodigo conn, ws, "SELECT sec_codigo FROM tb_secao", 18
     AtualizarColuna conn, ws, "SELECT CONCAT(sec_codigo, ' - ', sec_descricao) AS descricao_completa FROM tb_secao", 1
     AtualizarColuna conn, ws, "SELECT sec_descricao FROM tb_secao", 48
-    AtualizarColunaComCodigo conn, ws, "SELECT CAST(esp_codigo AS VARCHAR) AS descricao_completa FROM tb_especie", 19
+    AtualizarColunaComCodigo conn, ws, "SELECT CAST(esp_codigo AS VARCHAR) AS descricao_completa FROM tb_especie ORDER BY (SELECT NULL)", 19
     AtualizarColuna conn, ws, "SELECT CAST(esp_codigo AS VARCHAR) + ' - ' + LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))) AS descricao_completa FROM tb_especie", 2
     AtualizarColuna conn, ws, "SELECT LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))) AS descricao FROM tb_especie", 49
     AtualizarColuna conn, ws, "SELECT CONCAT(mar_codigo, ' - ', mar_descricao) AS descricao_completa FROM tb_marca", 5
@@ -114,7 +114,6 @@ Sub AtualizarDadosConsolidados()
     Set conn = Nothing
 
     Call CriarIntervalosNomeadosB
-    MsgBox "Dados atualizados com sucesso!", vbInformation
 End Sub
 
 Sub AtualizarColuna(conn As Object, ws As Worksheet, query As String, coluna As Integer)
@@ -141,9 +140,7 @@ End Sub
 Sub AtualizarColunaComCodigo(conn As Object, ws As Worksheet, query As String, coluna As Integer)
     Dim rs As Object
     Dim linha As Long
-    Dim codigo As Long
     linha = 1
-    codigo = 1
 
     Set rs = conn.Execute(query)
     
@@ -153,9 +150,8 @@ Sub AtualizarColunaComCodigo(conn As Object, ws As Worksheet, query As String, c
     End If
 
     Do While Not rs.EOF
-        ws.Cells(linha, coluna).Value = codigo
+        ws.Cells(linha, coluna).Value = rs.Fields(0).Value
         linha = linha + 1
-        codigo = codigo + 1
         rs.MoveNext
     Loop
 

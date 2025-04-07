@@ -137,12 +137,65 @@ def preencher_planilha(dados, caminho_arquivo):
 
     wb.save(caminho_arquivo_novo)
 
+    print("Identificando colunas obrigatórias...")
+
+    connection, cursor = get_connection_from_file('conexao_temp.txt')
+
+    cursor.execute("""
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = 'tb_produto' 
+        AND IS_NULLABLE = 'NO'
+    """)
+
+    colunas_obrigatorias = {row.COLUMN_NAME for row in cursor.fetchall()}
+    colunas_obrigatorias.update(["und_codigo", "clf_codigo", "prd_origem"]) 
+
+    mapeamento_colunas = {
+        "sec_codigo": "Seção",
+        "esp_codigo": "Espécie",
+        "prd_descricao": "Descrição",
+        "prd_descricao_reduzida": "Descrição Reduzida",
+        "mar_codigo": "Marca",
+        "prd_referencia_fornec": "Referência do Fornecedor",
+        "prd_codigo_original": "Código Original",
+        "usu_codigo_comprador": "Comprador",
+        "und_codigo": "Unidade", 
+        "clf_codigo": "Classificação Fiscal",
+        "prd_origem": "Origem",
+        "prd_valor_venda": "Valor de Venda",
+        "prd_percentual_icms": "% ICMS",
+        "prd_percentual_ipi": "% IPI",
+        "etq_codigo_padrao": "Etiqueta Padrão"
+    }
+
+    aba_planilha = wb["Cadastro de Produtos"]
+
+    linha_titulo = 3
+    linha_obrigatorio = 4
+    ultima_coluna = 17
+
+    for col in range(1, ultima_coluna + 1):
+        nome_coluna_excel = aba_planilha.cell(row=linha_titulo, column=col).value
+
+        if nome_coluna_excel is None:
+            nome_coluna_excel = aba_planilha.cell(row=linha_titulo, column=col - 1).value  
+
+        for col_sql, col_excel in mapeamento_colunas.items():
+            if nome_coluna_excel == col_excel and col_sql in colunas_obrigatorias:
+                aba_planilha.cell(row=linha_obrigatorio, column=col, value="Obrigatorio")
+
+    wb.save(caminho_arquivo_novo)
+    print("Colunas obrigatórias preenchidas!\n")
+
+    connection.close()
+
     def adicionar_validacao(aba, intervalo_celulas, referencia_dados):
 
         dv = DataValidation(type="list", formula1=referencia_dados, showDropDown=False)
         dv.error = "Por favor, selecione um valor da lista."
         dv.errorTitle = "Valor Inválido"
-        dv.showErrorMessage = True
+        dv.showErrorMessage = False
 
         aba.add_data_validation(dv)
         for linha in aba[intervalo_celulas]:
@@ -151,7 +204,7 @@ def preencher_planilha(dados, caminho_arquivo):
 
     print("Atualizando validação de dados para espécies...")
     for i in range(7, aba_planilha.max_row + 1):
-        formula = f'=INDIRECT("\'Dados Consolidados\'!SecaoCompleta" & Y{i})'
+        formula = f'=INDIRECT("\'Dados Consolidados\'!SecaoCompleta" & BB{i})'
         
         dv = DataValidation(type="list", formula1=formula, showDropDown=False)
         dv.error = "Por favor, selecione um valor da lista."

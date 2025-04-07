@@ -1,138 +1,73 @@
+import pyodbc
 import openpyxl
 
-def processar_atributos(planilha_path):
-    # Carregar a planilha e selecionar a aba "Cadastro de Produtos"
-    try:
-        wb = openpyxl.load_workbook(planilha_path)
-    except FileNotFoundError:
-        print(f"Erro: Arquivo '{planilha_path}' não encontrado.")
-        return []
-    
-    # Verificar se a aba existe (com tratamento para diferenças de capitalização)
-    nome_aba = None
-    for sheetname in wb.sheetnames:
-        if sheetname.lower() == "cadastro de produtos":
-            nome_aba = sheetname
-            break
-    
-    if not nome_aba:
-        print(f"Erro: A aba 'Cadastro de Produtos' não foi encontrada na planilha.")
-        return []
-    
-    ws = wb[nome_aba]
-    
-    resultados = []
-    
-    # Processar cada linha do intervalo Q7:X200
-    for linha in range(7, 201):  # De 7 até 200
-        # Inicializar contador de variações para esta linha
-        ipr_codigo = 0
-        tuplas_preenchidas = []
-        
-        # Verificar a primeira tupla obrigatória (Q e U)
-        q_val = ws['Q' + str(linha)].value
-        u_val = ws['U' + str(linha)].value
-        
-        if q_val is not None and u_val is not None:
-            ipr_codigo = 1
-            tupla1 = {
-                'linha': linha,
-                'tupla': 1,
-                'cor': q_val,
-                'tamanho': u_val,
-                'coluna_cor': 'Q',
-                'coluna_tamanho': 'U'
-            }
-            tuplas_preenchidas.append(tupla1)
-            
-            # Verificar as tuplas adicionais
-            # Tupla 2: R e V
-            r_val = ws['R' + str(linha)].value
-            v_val = ws['V' + str(linha)].value
-            if r_val is not None and v_val is not None:
-                ipr_codigo += 1
-                tupla2 = {
-                    'linha': linha,
-                    'tupla': 2,
-                    'cor': r_val,
-                    'tamanho': v_val,
-                    'coluna_cor': 'R',
-                    'coluna_tamanho': 'V'
-                }
-                tuplas_preenchidas.append(tupla2)
-                
-            # Tupla 3: S e W
-            s_val = ws['S' + str(linha)].value
-            w_val = ws['W' + str(linha)].value
-            if s_val is not None and w_val is not None:
-                ipr_codigo += 1
-                tupla3 = {
-                    'linha': linha,
-                    'tupla': 3,
-                    'cor': s_val,
-                    'tamanho': w_val,
-                    'coluna_cor': 'S',
-                    'coluna_tamanho': 'W'
-                }
-                tuplas_preenchidas.append(tupla3)
-                
-            # Tupla 4: T e X
-            t_val = ws['T' + str(linha)].value
-            x_val = ws['X' + str(linha)].value
-            if t_val is not None and x_val is not None:
-                ipr_codigo += 1
-                tupla4 = {
-                    'linha': linha,
-                    'tupla': 4,
-                    'cor': t_val,
-                    'tamanho': x_val,
-                    'coluna_cor': 'T',
-                    'coluna_tamanho': 'X'
-                }
-                tuplas_preenchidas.append(tupla4)
-            
-            # Gerar os comandos INSERT apenas se houver pelo menos uma tupla válida
-            if ipr_codigo > 0:
-                inserts = []
-                for i in range(1, ipr_codigo + 1):
-                    insert_sql = f"""
-                    INSERT INTO tb_item_produto (sec_codigo, esp_codigo, prd_codigo, ipr_codigo, ipr_codigo_barra, ipr_preco_promocional, ipr_gtin)
-                    VALUES (?, ?, ?, {i}, 0, 0, NULL)
-                    """
-                    inserts.append(insert_sql)
-                
-                resultados.append({
-                    'linha': linha,
-                    'ipr_codigo': ipr_codigo,
-                    'inserts': inserts,
-                    'tuplas': tuplas_preenchidas
-                })
-    
-    return resultados
+def get_connection(driver='SQL Server Native Client 11.0', server='localhost', database='NexttLoja', username='sa', password=None, trusted_connection='yes'):
+    string_connection = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password};Trusted_Connection={trusted_connection}"
+    connection = pyodbc.connect(string_connection)
+    return connection
 
-def gerar_relatorio(resultados):
-    print("\n=== RELATÓRIO DE PROCESSAMENTO ===")
-    print(f"Total de linhas com variações: {len(resultados)}")
-    
-    for resultado in resultados:
-        print(f"\nLinha {resultado['linha']}:")
-        print(f"- Variações encontradas: {resultado['ipr_codigo']}")
-        
-        for tupla in resultado['tuplas']:
-            print(f"  Tupla {tupla['tupla']}: {tupla['coluna_cor']}={tupla['cor']} (cor) e {tupla['coluna_tamanho']}={tupla['tamanho']} (tamanho)")
-        
-        print("\n  Comandos INSERT gerados:")
-        for i, insert in enumerate(resultado['inserts'], start=1):
-            print(f"  {i}. {insert.strip()}")
+# Conectar ao SQL Server
+connection = get_connection() 
+cursor = connection.cursor()  
 
-# Exemplo de uso
-if __name__ == "__main__":
-    caminho_planilha = "Cadastros Auto Nextt limpa.xlsx"
-    
-    print(f"Processando arquivo: {caminho_planilha}")
-    resultados = processar_atributos(caminho_planilha)
-    
-    if resultados:
-        gerar_relatorio(resultados)
-    else:
-        print("Nenhuma variação foi encontrada nas linhas processadas.")
+# Consultar colunas obrigatórias
+cursor.execute("""
+    SELECT COLUMN_NAME 
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_NAME = 'tb_produto' 
+    AND IS_NULLABLE = 'NO'
+""")
+
+# Obter os nomes das colunas obrigatórias
+colunas_obrigatorias = {row.COLUMN_NAME for row in cursor.fetchall()}
+
+# Adicionar manualmente as colunas que devem ser obrigatórias mesmo que não estejam na consulta
+colunas_obrigatorias.update(["und_codigo", "clf_codigo", "prd_origem"])
+
+# Mapeamento das colunas do banco para os nomes no Excel
+mapeamento_colunas = {
+    "sec_codigo": "Seção",
+    "esp_codigo": "Espécie",
+    "prd_descricao": "Descrição",
+    "prd_descricao_reduzida": "Descrição Reduzida",
+    "mar_codigo": "Marca",
+    "prd_referencia_fornec": "Referência do Fornecedor",
+    "prd_codigo_original": "Código Original",
+    "usu_codigo_comprador": "Comprador",
+    "und_codigo": "Unidade",                 # Unidade sempre obrigatória
+    "clf_codigo": "Classificação Fiscal",     # Classificação Fiscal sempre obrigatória
+    "prd_origem": "Origem",                   # Origem sempre obrigatória
+    "prd_valor_venda": "Valor de Venda",
+    "prd_percentual_icms": "% ICMS",
+    "prd_percentual_ipi": "% IPI",
+    "etq_codigo_padrao": "Etiqueta Padrão"
+}
+
+# Abrir o arquivo Excel
+caminho_arquivo = "teste.xlsx"
+wb = openpyxl.load_workbook(caminho_arquivo)
+ws = wb["Cadastro de Produtos"]  # Definir aba correta
+
+# Definir faixa de leitura (Coluna A até Q -> Colunas 1 a 17)
+ultima_coluna = 17  # Coluna Q
+linha_titulo = 3
+linha_obrigatorio = 4
+
+# Percorrer os cabeçalhos da linha 3 (somente até a coluna Q)
+for col in range(1, ultima_coluna + 1):
+    nome_coluna_excel = ws.cell(row=linha_titulo, column=col).value  # Nome da coluna no Excel
+
+    # Se a célula estiver mesclada, pegar o valor à esquerda
+    if nome_coluna_excel is None:
+        nome_coluna_excel = ws.cell(row=linha_titulo, column=col - 1).value  
+
+    # Verificar se a coluna está mapeada e é obrigatória
+    for col_sql, col_excel in mapeamento_colunas.items():
+        if nome_coluna_excel == col_excel and col_sql in colunas_obrigatorias:
+            # Simplesmente sobrescreve a célula sem empurrar para baixo
+            ws.cell(row=linha_obrigatorio, column=col, value="Obrigatório")
+
+# Salvar as alterações
+wb.save(caminho_arquivo)
+wb.close()
+connection.close()

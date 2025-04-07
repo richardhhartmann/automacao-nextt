@@ -4,9 +4,10 @@ import tkinter as tk
 import os
 import json
 import sys
+import openpyxl
 from tkinter import filedialog
 from datetime import datetime
-import openpyxl
+from openpyxl.utils import get_column_letter, column_index_from_string
 
 def get_connection_from_file(file_name='conexao_temp.txt'):
     """Lê o arquivo JSON e cria uma conexão com o banco de dados."""
@@ -44,9 +45,27 @@ def selecionar_arquivo():
     root.withdraw()
     arquivo_path = filedialog.askopenfilename(title="Selecione o arquivo Excel", filetypes=[("Arquivos Excel", "*.xlsx;*.xls;*.xlsm")])
     return arquivo_path
-    
+
+def get_colunas_adicionais(ws, linha_cabecalho=3, coluna_inicial='Y'):
+    """Retorna todas as colunas adicionais que possuem valores no cabeçalho"""
+    colunas = []
+    current_col_idx = column_index_from_string(coluna_inicial)
+
+    while True:
+        col_letter = get_column_letter(current_col_idx)
+        valor = ws[f'{col_letter}{linha_cabecalho}'].value
+        if pd.isna(valor):
+            break
+        colunas.append(col_letter)
+        current_col_idx += 1
+
+    return colunas
+
+
 def cadastrar_produto():
     caminho_arquivo = selecionar_arquivo()
+    wb = openpyxl.load_workbook(caminho_arquivo, data_only=True)
+    ws = wb["Cadastro de Produtos"]
     if not caminho_arquivo:
         print("Nenhum arquivo selecionado. O programa será encerrado.")
         return
@@ -55,8 +74,9 @@ def cadastrar_produto():
 
     try:
         df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos", skiprows=6, header=None)
-        #pd.set_option('display.max_columns', None)
-        #print(f"Total de colunas lidas: {len(df.columns)}")
+        pd.set_option('display.max_columns', None)
+        print("Dados lidos do Excel:")
+        #print(df)
         
         df.columns = [
             "secao", "especie", "descricao", "descricao_reduzida", "marca", "referencia",
@@ -77,6 +97,8 @@ def cadastrar_produto():
         df['origem'] = pd.to_numeric(df['origem'], errors='coerce').fillna(0).astype('int16')
         df['icms'] = pd.to_numeric(df['icms'], errors='coerce').fillna(0).astype('int16')
         df['ipi'] = pd.to_numeric(df['ipi'], errors='coerce').fillna(0).astype('int16')
+        df['etiqueta'] = pd.to_numeric(df['etiqueta'], errors='coerce').fillna(0).astype('int16')
+        df['comprador'] = pd.to_numeric(df['comprador'], errors='coerce').fillna(0).astype('int16')
         df['coluna25'] = pd.to_numeric(df['coluna25'], errors='coerce').fillna(0).astype('int16')
         df['coluna26'] = pd.to_numeric(df['coluna26'], errors='coerce').fillna(0).astype('int16')
         df['coluna27'] = pd.to_numeric(df['coluna27'], errors='coerce').fillna(0).astype('int16')
@@ -84,46 +106,56 @@ def cadastrar_produto():
         df['coluna29'] = pd.to_numeric(df['coluna29'], errors='coerce').fillna(0).astype('int16')
         df['coluna30'] = pd.to_numeric(df['coluna30'], errors='coerce').fillna(0).astype('int16')
         df['coluna31'] = pd.to_numeric(df['coluna31'], errors='coerce').fillna(0).astype('int16')
+        df['coluna54'] = pd.to_numeric(df['coluna54'], errors='coerce').fillna(0).astype('int16')
+        df['coluna55'] = pd.to_numeric(df['coluna55'], errors='coerce').fillna(0).astype('int16')
+        df['coluna56'] = pd.to_numeric(df['coluna56'], errors='coerce').fillna(0).astype('int16')
+        df['coluna57'] = pd.to_numeric(df['coluna57'], errors='coerce').fillna(0).astype('int16')
+        df['coluna58'] = pd.to_numeric(df['coluna58'], errors='coerce').fillna(0).astype('int16')
+        df['coluna59'] = pd.to_numeric(df['coluna59'], errors='coerce').fillna(0).astype('int16')
+        df['coluna60'] = pd.to_numeric(df['coluna60'], errors='coerce').fillna(0).astype('int16')
+        df['coluna61'] = pd.to_numeric(df['coluna61'], errors='coerce').fillna(0).astype('int16')
 
         duplicata = 0
         produtos_inseridos = 0
         variacoes_inseridas = 0
 
         for x in range(len(df)):
-            if df.iloc[x, 32] != "OK":
+            if df.iloc[x, 61] != "OK":
                 continue
             
-            secao = int(df.iloc[x, 24]) if not pd.isna(df.iloc[x, 24]) else None
-            especie = int(df.iloc[x, 25]) if not pd.isna(df.iloc[x, 25]) else None
+            linha_excel = x + 7
 
+            def trata_valor(valor, tipo=int):
+                if pd.isna(valor) or str(valor).strip().upper() in ['#N/D', '#N/A', 'N/D']:
+                    return None
+                try:
+                    return tipo(valor)
+                except:
+                    return None
+
+            secao = trata_valor(df.iloc[x, 53])
+            especie = trata_valor(df.iloc[x, 54])
             descricao = str(df.iloc[x, 2])[:50] if pd.notna(df.iloc[x, 2]) else None
             descricao_reduzida = str(df.iloc[x, 3])[:50] if pd.notna(df.iloc[x, 3]) else None
-            
-            marca = int(df.iloc[x, 26]) if not pd.isna(df.iloc[x, 26]) else None
+            marca = trata_valor(df.iloc[x, 55])
+            comprador = trata_valor(df.iloc[x, 56])
+            und_codigo = trata_valor(df.iloc[x, 57])
+            classificacao = trata_valor(df.iloc[x, 58])
+            origem = trata_valor(df.iloc[x, 59])
+            etiqueta = trata_valor(df.iloc[x, 60])
 
-            referencia = str(df.iloc[x, 5]) if pd.notna(df.iloc[x, 5]) else None
+            referencia = (str(int(df.iloc[x, 5])) if isinstance(df.iloc[x, 5], float) and df.iloc[x, 5].is_integer() else str(df.iloc[x, 5])) if pd.notna(df.iloc[x, 5]) else None
+
             
             if pd.notna(df.iloc[x, 6]):
                 cod_original = str(df.iloc[x, 6])
             else:
-                cursor.execute("SELECT MAX(prd_codigo_original) FROM tb_produto WHERE sec_codigo = ? and esp_codigo = ?", secao, especie)
-                resultado = cursor.fetchone()
-                maior_cod_original = resultado[0] if resultado[0] is not None else None
-                
-                if maior_cod_original is None:
-                    cod_original = 1
-                else:
-                    cod_original = maior_cod_original + 1
+                cod_original = ''
 
-            comprador = int(df.iloc[x, 27]) if pd.notna(df.iloc[x, 27]) else None
             ativo = 1
-            unidade = str(df.iloc[x, 9]) if pd.notna(df.iloc[x, 9]) else None
-            classificacao = int(df.iloc[x, 29]) if not pd.isna(df.iloc[x, 29]) else None
-            origem = str(df.iloc[x, 11]) if pd.notna(df.iloc[x, 11]) else None
             venda = float(str(df.iloc[x, 12]).replace(',', '.')) if pd.notna(df.iloc[x, 12]) else None
             icms = float(df.iloc[x, 13]) if pd.notna(df.iloc[x, 13]) else None
             ipi = float(df.iloc[x, 14]) if pd.notna(df.iloc[x, 14]) else None
-            etiqueta = int(df.iloc[x, 30]) if pd.notna(df.iloc[x, 30]) else None
             data = datetime.now()
             
             cursor.execute("SELECT MAX(prd_codigo) FROM tb_produto WHERE sec_codigo = ? AND esp_codigo = ?", secao, especie)
@@ -139,7 +171,7 @@ def cadastrar_produto():
             prd_ultimo_custo = 0
             prd_arquivo_foto = None
             prd_tipo_tributacao = None
-            und_codigo = int(df.iloc[x, 28]) if not pd.isna(df.iloc[x, 28]) else None
+            unidade = None
             usu_codigo_cadastro = None
             sec_codigo_r = None
             esp_codigo_r = None
@@ -160,6 +192,9 @@ def cadastrar_produto():
 
             if produto_existe:
                 duplicata += 1
+
+            leitura_dados = [secao, especie, descricao, descricao_reduzida, marca, comprador, und_codigo, classificacao, origem, etiqueta, prd_codigo]
+            print(f"Dados: {leitura_dados}")
 
             if not produto_existe:
                 parametros = (
@@ -188,11 +223,30 @@ def cadastrar_produto():
                             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, parametros)
 
-                linha_excel = x + 7
                 variacoes_produto = 0
 
                 wb = openpyxl.load_workbook(caminho_arquivo)
                 ws = wb["Cadastro de Produtos"]
+                colunas_adicionais = get_colunas_adicionais(ws)
+                print(f"Colunas adicionais encontradas: {colunas_adicionais}")
+                wb.close()
+
+                colunas_adicionais = ['Y', 'Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 
+                'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR',
+                'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ']
+
+                for idx, col in enumerate(colunas_adicionais, start=3):
+                    valor = ws[f'{col}{linha_excel}'].value
+                    if pd.notna(valor):
+                        try:
+                            cursor.execute("""
+                                INSERT INTO tb_atributo_produto 
+                                (sec_codigo, esp_codigo, prd_codigo, tpa_codigo, apr_descricao, prr_codigo)
+                                VALUES (?, ?, ?, ?, ?, NULL)
+                            """, secao, especie, prd_codigo, idx, str(valor))
+                            print(f"  - Atributo adicional {idx} ({col}{linha_excel}) inserido: {valor}")
+                        except pyodbc.IntegrityError as e:
+                            print(f"  - Ignorado atributo duplicado: {idx} ({col}{linha_excel})")
 
                 tuplas = [
                     ('Q', 'U'),  
@@ -200,11 +254,11 @@ def cadastrar_produto():
                     ('S', 'W'), 
                     ('T', 'X') 
                 ]
-                
+
                 for i, (col_cor, col_tamanho) in enumerate(tuplas, start=1):
                     cor = ws[f'{col_cor}{linha_excel}'].value
                     tamanho = ws[f'{col_tamanho}{linha_excel}'].value
-                    
+
                     if pd.notna(cor) and pd.notna(tamanho):
                         cursor.execute("""
                             INSERT INTO tb_item_produto 
@@ -216,15 +270,15 @@ def cadastrar_produto():
                             INSERT INTO tb_atributo_item_produto 
                             (sec_codigo, esp_codigo, prd_codigo, ipr_codigo,
                             tpa_codigo, aip_descricao, aip_ordem, aip_descricao_fornec)
-                            VALUES (?, ?, ?, ?, 1, ?, 0, NULL)
-                        """, secao, especie, prd_codigo, i, str(cor))
+                            VALUES (?, ?, ?, ?, 1, ?, ?, NULL)
+                        """, secao, especie, prd_codigo, i, str(cor), i)
 
                         cursor.execute("""
                             INSERT INTO tb_atributo_item_produto 
                             (sec_codigo, esp_codigo, prd_codigo, ipr_codigo,
                             tpa_codigo, aip_descricao, aip_ordem, aip_descricao_fornec)
-                            VALUES (?, ?, ?, ?, 2, ?, 0, NULL)
-                        """, secao, especie, prd_codigo, i, str(tamanho))
+                            VALUES (?, ?, ?, ?, 2, ?, ?, NULL)
+                        """, secao, especie, prd_codigo, i, str(tamanho), i)
 
                         variacoes_produto += 1
                         variacoes_inseridas += 1
@@ -244,5 +298,3 @@ def cadastrar_produto():
     finally:
         cursor.close()
         connection.close()
-
-

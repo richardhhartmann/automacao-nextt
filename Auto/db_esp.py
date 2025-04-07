@@ -69,6 +69,14 @@ try:
             VALUES (?, ?, ?, 0, NULL, 1, NULL, NULL)
         """, sec_codigo, esp_codigo_incrementado, descricao)
 
+        tpa_codigos = [1, 2, 3, 4, 5]
+
+        for tpa_codigo in tpa_codigos:
+            cursor.execute("""
+                INSERT INTO tb_regra_atributo_especie (sec_codigo, esp_codigo, tpa_codigo) 
+                VALUES (?, ?, ?)
+            """, (sec_codigo, esp_codigo_incrementado, tpa_codigo))
+
         connection.commit()
         print(f"Espécie '{descricao}' inserida com esp_codigo {esp_codigo_incrementado} na secao {sec_codigo}.")
 

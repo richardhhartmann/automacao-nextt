@@ -119,7 +119,10 @@ modulos_vba = [
     "db_ExecutarCadastroSecao.bas",
     "db_ExecutarCadastroSegmento.bas",
     "db_ExecutarCadastroMarca.bas",
-    "verificar_secao_completa.bas"
+    "verificar_secao_completa.bas",
+    "AplicarValidacaoObrigatoria.bas",
+    "GerarFormulaDinamica.bas",
+    "PreencherCelulasComAtributos.bas"
 ]
 
 class OutputRedirector:
@@ -206,50 +209,13 @@ def main():
 
     bloquear_campos(False)
 
-def exportar_conexao():
-    
-    mostrar_janela_carregamento()
-    
-    """Função executada quando o botão é pressionado"""
-    driver = entry_driver.get().strip()
-    server = entry_server.get().strip()
-    database = entry_database.get().strip()
-    username = entry_username.get().strip()
-    password = entry_password.get().strip()
-    trusted_connection = "yes" if var_trusted_connection.get() else "no"
-
-    if not all([driver, server, database]):
-        label_status.config(text="Preencha todos os campos obrigatórios!", fg="red")
-        return
-
-    dados_conexao = {
-    "driver": driver,
-    "server": server,
-    "database": database,
-    "username": username,
-    "password": password,
-    "trusted_connection": trusted_connection
-}
-
-    try:
-        with open('conexao_temp.txt', 'w') as f:
-            json.dump(dados_conexao, f, indent=4)
-
-        print("\nConfiguração exportada com sucesso!")  
-        label_status.config(text="Configuração salva com sucesso!", fg="green")
-
-        root.after(100, main)
-
-    except Exception as e:
-        fechar_janela_carregamento()
-        print(f"Erro ao salvar conexão: {e}") 
-        label_status.config(text=f"Erro ao salvar: {str(e)}", fg="red")
-
 def importar():
+    
     if not validar_campos():
         return
     
     root.after(100, lambda: (cadastrar_produto()))
+    mostrar_janela_carregamento()
 
 root = tk.Tk()
 root.title("Conexão Banco de Dados")

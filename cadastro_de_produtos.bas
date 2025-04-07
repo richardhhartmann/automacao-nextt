@@ -19,7 +19,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         End If
     End If
     
-    If Not Intersect(Target, Me.Range("A7:A200, B7:B200, Y7:Y200, Z7:Z200")) Is Nothing Then
+    If Not Intersect(Target, Me.Range("A7:A200, B7:B200, BB7:Y200, BC7:Z200")) Is Nothing Then
         Application.EnableEvents = False 
         Call VerificarSecaoCompleta.VerificarSecaoCompleta 
         Application.EnableEvents = True

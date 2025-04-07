@@ -130,6 +130,27 @@ def importar_codigo_para_aba(wb, nome_aba, caminho_codigo):
         print(f"Erro ao importar código para aba '{nome_aba}': {e}")
         return False
 
+def importar_autoexec_para_thisworkbook(workbook, caminho_autoexec):
+    """Importa o conteúdo de autoexec.bas para o módulo ThisWorkbook (evento Workbook_Open)."""
+    try:
+        if not os.path.exists(caminho_autoexec):
+            print(f"Arquivo {caminho_autoexec} não encontrado.")
+            return False
+
+        with open(caminho_autoexec, 'r', encoding='utf-8') as f:
+            codigo_autoexec = f.read()
+
+        thisworkbook = workbook.VBProject.VBComponents(workbook.CodeName)
+        thisworkbook.CodeModule.DeleteLines(1, thisworkbook.CodeModule.CountOfLines)
+        thisworkbook.CodeModule.AddFromString(codigo_autoexec)
+
+        print("Código do autoexec.bas importado com sucesso para ThisWorkbook!")
+        return True
+
+    except Exception as e:
+        print(f"Erro ao importar autoexec.bas para ThisWorkbook: {e}")
+        return False
+
 def importar_modulo_vba(caminho_arquivo, modulos_vba, caminho_novo_arquivo):
     """ Importa módulos VBA para a planilha convertida. """
     nome_empresa = obter_nome_empresa()
@@ -182,8 +203,16 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba, caminho_novo_arquivo):
             print("Executando a macro CriarIntervalosNomeadosB...")
             excel.Application.Run("CriarIntervalosNomeadosB")
             print("Macro 'CriarIntervalosNomeadosB' executada com sucesso!")
+
+            print("Executando a macro AplicarValidacaoObrigatoria...")
+            excel.Application.Run("AplicarValidacaoObrigatoria.AplicarValidacaoObrigatoria")
+            print("Macro 'AplicarValidacaoObrigatoria' executada com sucesso!")
+
+            caminho_autoexec = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "AutoExec.bas"))
+            importar_autoexec_para_thisworkbook(wb, caminho_autoexec)
+
         except Exception as e:
-            print(f"Erro ao executar 'CriarIntervalosNomeadosB': {e}")
+            print(f"Erro ao executar as macros: {e}")
 
         print("Criando botões e atribuindo macros...")
         criar_botoes_e_atribuir_macros(wb)
