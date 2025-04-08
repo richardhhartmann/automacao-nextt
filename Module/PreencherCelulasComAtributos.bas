@@ -104,11 +104,11 @@ Sub PreencherCelulasComAtributos()
                     .VerticalAlignment = xlCenter
                 End With
                 
-                ' Define o intervalo das tr�s linhas abaixo e adiciona o fundo cinza claro
+                ' Define o intervalo das tres linhas abaixo e adiciona o fundo cinza claro
                 Set rng = ws.Range(ws.Cells(4, colunaInicial + i), ws.Cells(6, colunaInicial + i))
                 rng.Interior.Color = RGB(243, 243, 243) ' Cor #F3F3F3
                 
-                ' Aplica bordas nas c�lulas da nova coluna (linha 3 a 6) na cor #D9D9D9
+                ' Aplica bordas nas celulas da nova coluna (linha 3 a 6) na cor #D9D9D9
                 With ws.Range(ws.Cells(3, colunaInicial + i), ws.Cells(6, colunaInicial + i)).Borders
                     .LineStyle = xlContinuous
                     .Weight = xlThin
@@ -122,7 +122,7 @@ Sub PreencherCelulasComAtributos()
         ' Define o tamanho fixo das novas colunas como 20
         ws.Columns(colunaInicial).Resize(1, qtdValores).ColumnWidth = 20
 
-        ' **Corrige a mesclagem sem empurrar outras c�lulas**
+        ' **Corrige a mesclagem sem empurrar outras celulas**
         With ws.Range(ws.Cells(1, 18), ws.Cells(2, ultimaColuna))
             .Merge
             .HorizontalAlignment = xlCenter
@@ -133,7 +133,7 @@ Sub PreencherCelulasComAtributos()
         MsgBox "Nenhum dado encontrado na consulta.", vbInformation
     End If
 
-    ' Fecha a conex�o
+    ' Fecha a conexao
     rs.Close
     conn.Close
     Set rs = Nothing

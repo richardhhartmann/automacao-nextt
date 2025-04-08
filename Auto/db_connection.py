@@ -214,12 +214,12 @@ def preencher_planilha(dados, caminho_arquivo):
         aba_planilha.add_data_validation(dv)
         dv.add(aba_planilha[f"B{i}"])
 
-    if "Cadastro de Seção" in wb.sheetnames:
-        aba_secao = wb["Cadastro de Seção"]
+    if "Cadastro de Secao" in wb.sheetnames:
+        aba_secao = wb["Cadastro de Secao"]
         adicionar_validacao(aba_secao, "B7:B200", f"'Dados Consolidados'!$AR$1:$AR$10000")
 
-    if "Cadastro de Espécie" in wb.sheetnames:
-        aba_especie = wb["Cadastro de Espécie"]
+    if "Cadastro de Especie" in wb.sheetnames:
+        aba_especie = wb["Cadastro de Especie"]
         adicionar_validacao(aba_especie, "B7:B200", f"'Dados Consolidados'!$A$1:$A$10000")
 
     if "Cadastro de Produtos" in wb.sheetnames:
@@ -253,8 +253,8 @@ def preencher_planilha(dados, caminho_arquivo):
         "Cadastro de Pedidos",
         "Cadastro de Marcas",
         "Cadastro de Segmento",
-        "Cadastro de Seção",
-        "Cadastro de Espécie"
+        "Cadastro de Secao",
+        "Cadastro de Especie"
     ]
 
     for aba_nome in abas:

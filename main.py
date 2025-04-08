@@ -100,30 +100,21 @@ def obter_nome_empresa():
         return "Erro"
 
 nome_empresa = obter_nome_empresa()
-caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
-caminho_novo_arquivo = 'Cadastros Auto Nextt.xlsx'
+
+pasta_modulos = os.path.join(os.path.dirname(__file__), "Module")
+
+if not os.path.exists(pasta_modulos):
+    print(f"Erro: A pasta '{pasta_modulos}' não foi encontrada!")
+    exit()
 
 modulos_vba = [
-    "CriarIntervalosNomeadosB.bas", 
-    "cadastro_de_produtos.bas",
-    "cadastro_de_marcas.bas",
-    "cadastro_de_segmento.bas",
-    "cadastro_de_secao.bas",
-    "cadastro_de_especie.bas",
-    "db_AtualizarDadosConsolidados.bas",
-    "db_cadastro_de_especie.bas",
-    "db_cadastro_de_secao.bas",
-    "db_cadastro_de_segmento.bas",
-    "db_cadastro_de_marca.bas",
-    "db_ExecutarCadastroEspecie.bas",
-    "db_ExecutarCadastroSecao.bas",
-    "db_ExecutarCadastroSegmento.bas",
-    "db_ExecutarCadastroMarca.bas",
-    "verificar_secao_completa.bas",
-    "AplicarValidacaoObrigatoria.bas",
-    "GerarFormulaDinamica.bas",
-    "PreencherCelulasComAtributos.bas"
+    os.path.join(pasta_modulos, arquivo)
+    for arquivo in os.listdir(pasta_modulos)
+    if arquivo.endswith((".bas", ".frm")) and arquivo != "AutoExec.bas"
 ]
+
+caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
+caminho_novo_arquivo = 'Cadastros Auto Nextt.xlsx'
 
 class OutputRedirector:
     def __init__(self, text_widget):
@@ -200,7 +191,7 @@ def main():
     preencher_planilha(dados, caminho_arquivo)
     
     print("Planilha preenchida com sucesso.") 
-    importar_modulo_vba(caminho_novo_arquivo, modulos_vba, caminho_novo_arquivo)
+    importar_modulo_vba(caminho_novo_arquivo, modulos_vba, pasta_modulos)
     
     print("VBA importado com sucesso.")  
     print("Processo concluído com sucesso.")

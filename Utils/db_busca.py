@@ -1,13 +1,53 @@
 import pyodbc
+import json
+import os
+import sys
 
-def get_connection(driver='SQL Server Native Client 11.0', server='localhost', database='NexttLoja', username='sa', password=None, trusted_connection='yes'):
-    string_connection = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password};Trusted_Connection={trusted_connection}"
-    connection = pyodbc.connect(string_connection)
-    return connection  
+def get_connection_from_file(file_name):
+    """Lê o arquivo JSON e cria uma conexão com o banco de dados."""
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        file_path = os.path.join(script_dir, '..', file_name)
+        
+        with open(file_path, 'r') as f:
+            config = json.load(f)
+
+        driver = config.get('driver', None)
+        server = config.get('server', None)
+        database = config.get('database', None)
+        username = config.get('username', None)
+        password = config.get('password', None)
+        trusted_connection = config.get('trusted_connection', None)
+
+        if trusted_connection.lower() == 'yes':
+            string_connection = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};Trusted_Connection={trusted_connection}"
+        else:
+            string_connection = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};UID={username};PWD={password};"
+
+        connection = pyodbc.connect(string_connection)
+        cursor = connection.cursor()
+
+        return connection, cursor
+
+    except Exception as e:
+        print(f"Erro ao conectar ao banco de dados: {e}")
+        sys.exit(1)
+
+def empresa_nome():
+    connection, cursor = get_connection_from_file('conexao_temp.txt')
+    cursor.execute("""
+        SELECT * FROM tb_empresa
+    """)
+
+    empresa = cursor.fetchone()
+    cursor.close()
+    connection.close()
+
+    return empresa
 
 def search_in_database(search_term):
-    connection = get_connection() 
-    cursor = connection.cursor()  
+    connection, cursor = get_connection_from_file('conexao_temp.txt')
 
     cursor.execute("""
         SELECT TABLE_NAME, COLUMN_NAME
@@ -35,5 +75,6 @@ def search_in_database(search_term):
     cursor.close()
     connection.close()
 
-search_term = input("Digite o termo que deseja buscar: ")
+empresa = empresa_nome()
+search_term = input(f"Digite o termo que deseja buscar no banco de dados de {empresa[1]}: ")
 search_in_database(search_term)

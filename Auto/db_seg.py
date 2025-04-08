@@ -47,7 +47,6 @@ connection, cursor = get_connection_from_file('conexao_temp.txt')
 
 try:
     print("Lendo dados do Excel...")
-    # Lendo os dados da aba "Cadastro de Seção" e configurando os nomes das colunas
     df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Segmento", skiprows=5, usecols="A")
     df.columns = ['descricao']
 

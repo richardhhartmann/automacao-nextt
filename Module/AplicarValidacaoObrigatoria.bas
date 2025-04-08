@@ -54,6 +54,18 @@ Sub AplicarValidacaoObrigatoria()
         .ErrorTitle = "Erro de Validação"
         .ErrorMessage = "O texto inserido excede o tamanho máximo permitido para esta celula."
     End With
+
+    Set EANLimite = ws.Range("Q7:Q200")
+    EANLimite.Validation.Delete
+    
+    With EANLimite.Validation
+        .Add Type:=xlValidateTextLength, AlertStyle:=xlValidAlertStop, Operator:=xlLessEqual, Formula1:="20"
+        .IgnoreBlank = True
+        .ShowInput = True
+        .ShowError = True
+        .ErrorTitle = "Erro de Validação"
+        .ErrorMessage = "O texto inserido excede o tamanho máximo permitido para esta celula."
+    End With
 Proximo:
     Next coluna
 

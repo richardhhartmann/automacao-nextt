@@ -8,6 +8,7 @@ import openpyxl
 from openpyxl.drawing.image import Image
 
 caminho_parametros = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'conexao_temp.txt')
+caminho_raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def adicionar_imagens(caminho_arquivo):
     """ Adiciona as imagens nas células B2 e G10 da aba 'Nextt' """
@@ -144,14 +145,14 @@ def importar_autoexec_para_thisworkbook(workbook, caminho_autoexec):
         thisworkbook.CodeModule.DeleteLines(1, thisworkbook.CodeModule.CountOfLines)
         thisworkbook.CodeModule.AddFromString(codigo_autoexec)
 
-        print("Código do autoexec.bas importado com sucesso para ThisWorkbook!")
+        print("Código do autoexec.bas importado com sucesso!")
         return True
 
     except Exception as e:
-        print(f"Erro ao importar autoexec.bas para ThisWorkbook: {e}")
+        print(f"Erro ao importar autoexec.bas: {e}")
         return False
 
-def importar_modulo_vba(caminho_arquivo, modulos_vba, caminho_novo_arquivo):
+def importar_modulo_vba(caminho_arquivo, modulos_vba, pasta_modulos):
     """ Importa módulos VBA para a planilha convertida. """
     nome_empresa = obter_nome_empresa()
     caminho_planilha_xlsm = converter_xlsx_para_xlsm(caminho_arquivo, nome_empresa)
@@ -177,27 +178,37 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba, caminho_novo_arquivo):
             "Cadastro de Produtos": "cadastro_de_produtos.bas",
             "Cadastro de Marcas": "cadastro_de_marcas.bas",
             "Cadastro de Segmento": "cadastro_de_segmento.bas",
-            "Cadastro de Seção": "cadastro_de_secao.bas",
-            "Cadastro de Espécie": "cadastro_de_especie.bas"
+            "Cadastro de Secao": "cadastro_de_secao.bas",
+            "Cadastro de Especie": "cadastro_de_especie.bas"
         }
 
         for nome_aba, nome_arquivo in mapeamento_abas.items():
-            if nome_arquivo in modulos_vba:
-                caminho_completo = os.path.abspath(nome_arquivo)
+            caminho_completo = os.path.join(pasta_modulos, nome_arquivo)
+            if os.path.exists(caminho_completo):
                 importar_codigo_para_aba(wb, nome_aba, caminho_completo)
-
-        json_converter_path = os.path.abspath(os.path.join("VBA-JSON-master", "JsonConverter.bas"))
-        if os.path.exists(json_converter_path):
-            modulos_vba.append(json_converter_path)
+            else:
+                print(f"Aviso: {nome_arquivo} não encontrado para a aba {nome_aba}.")
 
         for modulo in modulos_vba:
-            if modulo not in mapeamento_abas.values():
+            nome_arquivo = os.path.basename(modulo)
+            if nome_arquivo not in mapeamento_abas.values():
                 try:
-                    print(f"Importando o módulo VBA: {modulo}")
-                    wb.VBProject.VBComponents.Import(os.path.abspath(modulo))
-                    print(f"Módulo {modulo} importado com sucesso!")
+                    print(f"Importando módulo: {nome_arquivo}")
+                    wb.VBProject.VBComponents.Import(modulo)
+                    print(f"{nome_arquivo} importado!")
                 except Exception as e:
-                    print(f"Erro ao importar o módulo {modulo}: {e}")
+                    print(f"Erro ao importar {nome_arquivo}: {e}")
+
+        json_converter_path = os.path.join(caminho_raiz, "VBA-JSON-master", "JsonConverter.bas")
+        if os.path.exists(json_converter_path):
+            try:
+                print(f"Importando JsonConverter.bas de: {json_converter_path}")
+                wb.VBProject.VBComponents.Import(json_converter_path)
+                print("JsonConverter.bas importado com sucesso!")
+            except Exception as e:
+                print(f"Erro ao importar JsonConverter.bas: {e}")
+        else:
+            print(f"AVISO: JsonConverter.bas não encontrado em {json_converter_path}")
 
         try:
             print("Executando a macro CriarIntervalosNomeadosB...")
@@ -208,8 +219,11 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba, caminho_novo_arquivo):
             excel.Application.Run("AplicarValidacaoObrigatoria.AplicarValidacaoObrigatoria")
             print("Macro 'AplicarValidacaoObrigatoria' executada com sucesso!")
 
-            caminho_autoexec = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "AutoExec.bas"))
-            importar_autoexec_para_thisworkbook(wb, caminho_autoexec)
+            caminho_autoexec = os.path.join(pasta_modulos, "AutoExec.bas")
+            if os.path.exists(caminho_autoexec):
+                importar_autoexec_para_thisworkbook(wb, caminho_autoexec)
+            else:
+                print("AVISO: AutoExec.bas não encontrado em Module/")
 
         except Exception as e:
             print(f"Erro ao executar as macros: {e}")
@@ -219,7 +233,6 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba, caminho_novo_arquivo):
 
         adicionar_referencia_vba(os.path.abspath(caminho_planilha_xlsm))
         apagar_arquivo((os.path.abspath(caminho_arquivo)))
-        #adicionar_imagens(os.path.abspath(caminho_planilha_xlsm))
         encerrar_processos_excel()
 
         print("Salvando e fechando a planilha...")
@@ -245,9 +258,10 @@ def criar_botoes_e_atribuir_macros(wb):
     """ Cria botões nas abas e atribui macros a eles. """
     try:
         aba_segmento = wb.Sheets("Cadastro de Segmento")
-        aba_secao = wb.Sheets("Cadastro de Seção")
-        aba_especie = wb.Sheets("Cadastro de Espécie")
+        aba_secao = wb.Sheets("Cadastro de Secao")
+        aba_especie = wb.Sheets("Cadastro de Especie")
         aba_marca = wb.Sheets("Cadastro de Marcas")
+        aba_nextt = wb.Sheets("Nextt")
 
         left = aba_segmento.Range("A6").Left
         top = aba_segmento.Range("A6").Top
@@ -283,6 +297,15 @@ def criar_botoes_e_atribuir_macros(wb):
         botao_marca = aba_marca.Shapes.AddFormControl(5, left, top, largura, altura)
         botao_marca.TextFrame.Characters().Text = "Executar Cadastro"
         botao_marca.OnAction = "ExecutarCadastroMarca"
+
+        left = aba_nextt.Range("B19").Left
+        top = aba_nextt.Range("B19").Top
+        largura = aba_nextt.Range("B19").Width + aba_nextt.Range("C19").Width
+        altura = aba_nextt.Range("B19").Height  
+
+        botao_reexibir = aba_nextt.Shapes.AddFormControl(5, left, top, largura, altura)
+        botao_reexibir.TextFrame.Characters().Text = "Modo operador"
+        botao_reexibir.OnAction = "ReexibirAbas.ReexibirAbas"
 
         print("Botões criados e macros atribuídas com sucesso!")
 
@@ -324,23 +347,3 @@ def encerrar_processos_excel():
         print("Processos do Excel encerrados.")
     except Exception as e:
         print(f"Erro ao encerrar processos do Excel: {e}")
-
-"""caminho_novo_arquivo = 'Cadastros Auto Nextt.xlsx'
-modulos_vba = [
-    "CriarIntervalosNomeadosB.bas", 
-    "cadastro_de_produtos.bas",
-    "cadastro_de_marcas.bas",
-    "cadastro_de_segmento.bas",
-    "cadastro_de_secao.bas",
-    "cadastro_de_especie.bas",
-    "db_AtualizarDadosConsolidados.bas",
-    "db_cadastro_de_especie.bas",
-    "db_cadastro_de_secao.bas",
-    "db_cadastro_de_segmento.bas",
-    "db_cadastro_de_marca.bas",
-    "db_ExecutarCadastroEspecie.bas",
-    "db_ExecutarCadastroSecao.bas",
-    "db_ExecutarCadastroSegmento.bas",
-    "db_ExecutarCadastroMarca.bas"
-]
-importar_modulo_vba(caminho_novo_arquivo, modulos_vba)"""

@@ -49,8 +49,7 @@ connection, cursor = get_connection_from_file('conexao_temp.txt')
 
 try:
     print("Lendo dados do Excel...")
-    # Lendo os dados da aba "Cadastro de Seção" e configurando os nomes das colunas
-    df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Seção", skiprows=5, usecols="A,C")
+    df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Secao", skiprows=5, usecols="A,C")
     df.columns = ['descricao', 'seg_codigo']
 
     # Removendo linhas onde 'seg_codigo' está vazio
