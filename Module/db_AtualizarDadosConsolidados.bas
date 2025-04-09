@@ -22,7 +22,7 @@ Sub AtualizarDadosConsolidados()
 
     Set fso = CreateObject("Scripting.FileSystemObject")
     If Not fso.FileExists(caminhoArquivo) Then
-        MsgBox "Arquivo de conexÃ£o nÃ£o encontrado!", vbExclamation
+        MsgBox "Arquivo de conexao nao encontrado!", vbExclamation
         Exit Sub
     End If
 

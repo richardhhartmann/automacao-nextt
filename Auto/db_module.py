@@ -261,7 +261,6 @@ def criar_botoes_e_atribuir_macros(wb):
         aba_secao = wb.Sheets("Cadastro de Secao")
         aba_especie = wb.Sheets("Cadastro de Especie")
         aba_marca = wb.Sheets("Cadastro de Marcas")
-        aba_nextt = wb.Sheets("Nextt")
 
         left = aba_segmento.Range("A6").Left
         top = aba_segmento.Range("A6").Top
@@ -297,15 +296,6 @@ def criar_botoes_e_atribuir_macros(wb):
         botao_marca = aba_marca.Shapes.AddFormControl(5, left, top, largura, altura)
         botao_marca.TextFrame.Characters().Text = "Executar Cadastro"
         botao_marca.OnAction = "ExecutarCadastroMarca"
-
-        left = aba_nextt.Range("B19").Left
-        top = aba_nextt.Range("B19").Top
-        largura = aba_nextt.Range("B19").Width + aba_nextt.Range("C19").Width
-        altura = aba_nextt.Range("B19").Height  
-
-        botao_reexibir = aba_nextt.Shapes.AddFormControl(5, left, top, largura, altura)
-        botao_reexibir.TextFrame.Characters().Text = "Modo operador"
-        botao_reexibir.OnAction = "ReexibirAbas.ReexibirAbas"
 
         print("Botões criados e macros atribuídas com sucesso!")
 

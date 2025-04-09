@@ -13,6 +13,7 @@ Private Sub Workbook_Open()
     Call BloquearTodasAbas.BloquearTodasAbas
     Call BloquearTodasAbas.BloquearCadastroProdutos
     Call OcultarAbasProtegidas.OcultarAbasProtegidas
+    Call CriarShapeBotao.CriarShapeBotao
     
     ' Define as planilhas
     Set ws = ThisWorkbook.Sheets("Nextt")
@@ -54,8 +55,8 @@ Private Sub Workbook_Open()
             Filename:=uploadPath, _
             LinkToFile:=msoFalse, _
             SaveWithDocument:=msoTrue, _
-            Left:=ws.Range("G10").Left, _
-            Top:=ws.Range("G10").Top - 12, _
+            Left:=ws.Range("I10").Left, _
+            Top:=ws.Range("I10").Top - 12, _
             Width:=-1, Height:=-1)
             .Name = "UploadImage"
             .Width = 40

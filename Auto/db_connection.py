@@ -190,18 +190,6 @@ def preencher_planilha(dados, caminho_arquivo):
 
     connection.close()
 
-    def adicionar_validacao(aba, intervalo_celulas, referencia_dados):
-
-        dv = DataValidation(type="list", formula1=referencia_dados, showDropDown=False)
-        dv.error = "Por favor, selecione um valor da lista."
-        dv.errorTitle = "Valor Inválido"
-        dv.showErrorMessage = False
-
-        aba.add_data_validation(dv)
-        for linha in aba[intervalo_celulas]:
-            for celula in linha:
-                dv.add(celula)
-
     print("Atualizando validação de dados para espécies...")
     for i in range(7, aba_planilha.max_row + 1):
         formula = f'=INDIRECT("\'Dados Consolidados\'!SecaoCompleta" & BC{i})'
@@ -213,27 +201,6 @@ def preencher_planilha(dados, caminho_arquivo):
         
         aba_planilha.add_data_validation(dv)
         dv.add(aba_planilha[f"B{i}"])
-
-    if "Cadastro de Secao" in wb.sheetnames:
-        aba_secao = wb["Cadastro de Secao"]
-        adicionar_validacao(aba_secao, "B7:B200", f"'Dados Consolidados'!$AR$1:$AR$10000")
-
-    if "Cadastro de Especie" in wb.sheetnames:
-        aba_especie = wb["Cadastro de Especie"]
-        adicionar_validacao(aba_especie, "B7:B200", f"'Dados Consolidados'!$A$1:$A$10000")
-
-    if "Cadastro de Produtos" in wb.sheetnames:
-        aba_planilha = wb["Cadastro de Produtos"]
-        adicionar_validacao(aba_planilha, "L7:L200", f"'Dados Consolidados'!$L$1:$L${aba_dados.max_row}")
-
-    max_linhas = max(len(lista) for lista in dados.values()) + 10  
-
-    colunas_com_validacao = ["A", "B", "E", "H", "J", "K", "P"]
-
-    print("Adicionando validação de dados gerais...\n")    
-    for chave, coluna in tqdm(mapeamento_colunas.items(), desc="Validação"):
-        if coluna in colunas_com_validacao and chave in dados:  
-            adicionar_validacao(aba_planilha, f"{coluna}7:{coluna}{max_linhas}", f"'{nome_aba_dados}'!${coluna}$1:${coluna}${len(dados[chave]) + 1000}")
 
     wb.save(caminho_arquivo_novo)
     

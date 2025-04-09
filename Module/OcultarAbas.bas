@@ -6,6 +6,7 @@ Public Sub OcultarAbasProtegidas()
     
     Dim ws As Worksheet
     Dim nomeAba As Variant
+    Dim wsNextt As Worksheet
     
     For Each nomeAba In abasParaOcultar
         Set ws = ThisWorkbook.Sheets(nomeAba)
@@ -13,6 +14,15 @@ Public Sub OcultarAbasProtegidas()
             ws.Visible = xlSheetVeryHidden
         End If
     Next nomeAba
+    
+    Set wsNextt = ThisWorkbook.Sheets("Nextt")
+    For Each celula In wsNextt.Range("B13:B17")
+        If celula.MergeCells Then
+            celula.MergeArea.ClearContents
+        Else
+            celula.ClearContents
+        End If
+    Next celula
     
     On Error GoTo 0
 End Sub

@@ -20,9 +20,10 @@ Sub PreencherCelulasComAtributos()
     Dim ultimaColuna As Integer
     Dim qtdValores As Integer
     Dim i As Integer
-    Dim rng As Range
+    Dim j As Long
+    Dim espacoSuficiente As Boolean
 
-    Set ws = ThisWorkbook.Sheets("Cadastro de Produtos") 
+    Set ws = ThisWorkbook.Sheets("Cadastro de Produtos")
 
     caminhoArquivo = ThisWorkbook.Path & "\conexao_temp.txt"
 
@@ -87,57 +88,97 @@ Sub PreencherCelulasComAtributos()
     End If
 
     If qtdValores > 0 Then
-        colunaInicial = 26
-        ultimaColuna = colunaInicial + qtdValores - 1 
+        colunaInicial = 26 ' Coluna Z por padrão
+        ultimaColuna = colunaInicial + qtdValores - 1
+        
+        ' Verifica se há espaço suficiente a partir da colunaInicial
+        espacoSuficiente = False
+        For j = colunaInicial To ws.Columns.Count - qtdValores
+            espacoSuficiente = True
+            For i = 0 To qtdValores - 1
+                If ws.Cells(3, j + i).Value <> "" Then
+                    espacoSuficiente = False
+                    Exit For
+                End If
+            Next i
+            If espacoSuficiente Then
+                colunaInicial = j
+                ultimaColuna = colunaInicial + qtdValores - 1
+                Exit For
+            End If
+        Next j
+        
+        ' Se não encontrou espaço, insere novas colunas na colunaInicial
+        If Not espacoSuficiente Then
+            ws.Columns(colunaInicial).Resize(, qtdValores).Insert Shift:=xlToRight
+        End If
 
-        ws.Columns(ultimaColuna + 1).Resize(1, qtdValores).Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
-
+        With ws.Range(ws.Cells(1, 18), ws.Cells(2, ultimaColuna))
+            .Merge
+            .HorizontalAlignment = xlCenter
+            .VerticalAlignment = xlCenter
+            .Font.Bold = True
+            .Value = "Atributos"
+            
+            With .Borders
+                .LineStyle = xlContinuous
+                .Weight = xlThin
+                .Color = RGB(217, 217, 217)
+            End With
+        End With
+        
         rs.MoveFirst
         
         For i = 0 To qtdValores - 1
             If Not rs.EOF Then
                 With ws.Cells(3, colunaInicial + i)
-                    .Value = rs.Fields(0).Value
-                    .Font.Bold = True 
-                    .Interior.Color = RGB(142, 169, 219) 
-                    .HorizontalAlignment = xlCenter 
-                    .VerticalAlignment = xlCenter
+                    If .Value = "" Then
+                        .Value = rs.Fields(0).Value
+                        .Font.Bold = True
+                        .Interior.Color = RGB(142, 169, 219)
+                        .HorizontalAlignment = xlCenter
+                        .VerticalAlignment = xlCenter
+                        
+                        With .Borders
+                            .LineStyle = xlContinuous
+                            .Weight = xlThin
+                            .Color = RGB(217, 217, 217)
+                        End With
+                    End If
                 End With
-                
-                ' Define o intervalo das tres linhas abaixo e adiciona o fundo cinza claro
-                Set rng = ws.Range(ws.Cells(4, colunaInicial + i), ws.Cells(6, colunaInicial + i))
-                rng.Interior.Color = RGB(243, 243, 243) ' Cor #F3F3F3
-                
-                ' Aplica bordas nas celulas da nova coluna (linha 3 a 6) na cor #D9D9D9
-                With ws.Range(ws.Cells(3, colunaInicial + i), ws.Cells(6, colunaInicial + i)).Borders
-                    .LineStyle = xlContinuous
-                    .Weight = xlThin
-                    .Color = RGB(217, 217, 217) ' Cor #D9D9D9
+                    
+                With ws.Range(ws.Cells(4, colunaInicial + i), ws.Cells(6, colunaInicial + i))
+                    .Merge
+                    .Value = "Maximo 50 caracteres."
+                    .Interior.Color = RGB(243, 243, 243)
+                    .HorizontalAlignment = xlCenter
+                    .VerticalAlignment = xlCenter
+                    With .Font
+                        .Name = "Arial"
+                        .Size = 8
+                        .Color = RGB(0, 0, 0)
+                        .Italic = False
+                    End With
+                    
+                    With .Borders
+                        .LineStyle = xlContinuous
+                        .Weight = xlThin
+                        .Color = RGB(217, 217, 217)
+                    End With
                 End With
                 
                 rs.MoveNext
             End If
         Next i
         
-        ' Define o tamanho fixo das novas colunas como 20
-        ws.Columns(colunaInicial).Resize(1, qtdValores).ColumnWidth = 20
-
-        ' **Corrige a mesclagem sem empurrar outras celulas**
-        With ws.Range(ws.Cells(1, 18), ws.Cells(2, ultimaColuna))
-            .Merge
-            .HorizontalAlignment = xlCenter
-            .VerticalAlignment = xlCenter
-            .Font.Bold = True
-        End With
+        ws.Columns(colunaInicial).Resize(, qtdValores).ColumnWidth = 20
     Else
         MsgBox "Nenhum dado encontrado na consulta.", vbInformation
     End If
 
-    ' Fecha a conexao
     rs.Close
     conn.Close
     Set rs = Nothing
     Set conn = Nothing
-
 End Sub
 

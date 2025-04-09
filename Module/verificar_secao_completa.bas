@@ -1,4 +1,4 @@
-Attribute VB_Name = "VerificarSecaoCompleta"
+Attribute VB_Name = "VerificarSecaoEspecie"
 Sub VerificarSecaoCompleta()
     Dim ws As Worksheet, dadosWs As Worksheet
     Dim cel As Range, listaNomes As Range, item As Range
@@ -56,5 +56,40 @@ Sub VerificarSecaoCompleta()
 
 ProximaCelula:
         Set listaNomes = Nothing
+    Next cel
+End Sub
+
+Sub ValidarDescricoes()
+    Dim ws As Worksheet, dadosWs As Worksheet
+    Dim cel As Range, celDado As Range
+    Dim valorProcurado As Variant
+    Dim encontrado As Boolean
+
+    Set ws = ThisWorkbook.Sheets("Cadastro de Produtos")
+    Set dadosWs = ThisWorkbook.Sheets("Dados Consolidados")
+
+    For Each cel In ws.Range("A7:A200")
+        cel.Interior.ColorIndex = xlNone
+
+        If IsEmpty(cel.Value) Then GoTo ProximaCelula
+
+        valorProcurado = Trim(CStr(cel.Value))
+        encontrado = False
+
+        For Each celDado In dadosWs.Range("A1:A" & dadosWs.Cells(dadosWs.Rows.Count, 1).End(xlUp).Row)
+            If Trim(CStr(celDado.Value)) = valorProcurado Then
+                encontrado = True
+                Exit For
+            End If
+        Next celDado
+
+        If Not encontrado Then
+            cel.Interior.Color = RGB(244, 204, 204)
+            MsgBox "Secao nao encontrada para esta secao, tente novamente.", vbExclamation, "Erro de Validacao"
+            cel.ClearContents
+            cel.Interior.ColorIndex = xlNone
+        End If
+
+ProximaCelula:
     Next cel
 End Sub

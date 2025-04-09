@@ -13,21 +13,17 @@ Sub BloquearTodasAbas()
         On Error GoTo 0
         
         If Not ws Is Nothing Then
-            ' Desprotege a aba (se já estiver protegida)
-            ws.Unprotect Password:="nexttsol"
+            ws.Unprotect password:="nexttsol"
             
-            ' Bloqueia todas as células
             ws.Cells.Locked = True
             
-            ' Desativa todos os botões da aba
             For Each btn In ws.Shapes
                 If btn.Type = msoFormControl Then
-                    btn.ControlFormat.Enabled = False ' Desativa o botão
+                    btn.ControlFormat.Enabled = False
                 End If
             Next btn
             
-            ' Reprotege a aba
-            ws.Protect Password:="nexttsol", UserInterfaceOnly:=True, DrawingObjects:=False
+            ws.Protect password:="nexttsol", UserInterfaceOnly:=True, DrawingObjects:=False
             Set ws = Nothing
         End If
     Next i
@@ -43,20 +39,33 @@ Sub BloquearCadastroProdutos()
 
     ws.Cells.Locked = False
 
-    ' Define a ultima linha usada
-    Dim ultimaLinha As Long
-    ultimaLinha = ws.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
-    If ultimaLinha < 7 Then ultimaLinha = 1000 ' Define um minimo razoavel
-
-    ' Bloquear de A1 ate XFD6
     ws.Range("A1:XFD6").Locked = True
 
-    ' Bloquear de BL7 ate XFD(ultimaLinha)
+    Dim ultimaColunaComValor As Long
+    Dim col As Long
+    For col = ws.Range("A3").Column To ws.Range("BB3").Column
+        If Trim(ws.Cells(3, col).Value) <> "" Then
+            ultimaColunaComValor = col
+        End If
+    Next col
+
+    Dim inicioBloqueioColunaIndex As Long
+    If ultimaColunaComValor = 0 Then
+        inicioBloqueioColunaIndex = ws.Range("BB3").Column + 1
+    Else
+        inicioBloqueioColunaIndex = ultimaColunaComValor + 1
+    End If
+
+    Dim inicioBloqueioColuna As String
+    inicioBloqueioColuna = Split(ws.Cells(1, inicioBloqueioColunaIndex).Address, "$")(1)
+
+    Dim ultimaLinha As Long
+    ultimaLinha = ws.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
+    If ultimaLinha < 7 Then ultimaLinha = 1000
+
     Dim faixaBloqueio As String
-    faixaBloqueio = "BL7:XFD" & ultimaLinha
+    faixaBloqueio = inicioBloqueioColuna & "7:XFD" & ultimaLinha
     ws.Range(faixaBloqueio).Locked = True
 
-    ' Proteger aba
     ws.Protect password:="nexttsol", UserInterfaceOnly:=True
 End Sub
-
