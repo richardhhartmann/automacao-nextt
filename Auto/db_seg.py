@@ -50,27 +50,23 @@ try:
     df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Segmento", skiprows=5, usecols="A")
     df.columns = ['descricao']
 
-    # Removendo linhas onde 'descricao' está vazio
     df = df.dropna(subset=['descricao'])
 
     for _, row in df.iterrows():
         descricao = str(row['descricao'])[:50] if pd.notna(row['descricao']) else "Descrição não informada"
 
-        # Obtendo o maior código de segmento
         cursor.execute("SELECT MAX(seg_codigo) FROM tb_segmento")
         resultado = cursor.fetchone()
         maior_sec_codigo = resultado[0] if resultado[0] is not None else 0
 
         seg_codigo_incrementado = maior_sec_codigo + 1
 
-        # Inserindo os dados no banco
         cursor.execute("""
             INSERT INTO tb_segmento (seg_codigo, seg_descricao, ram_codigo) VALUES (?, ?, 1)
         """, seg_codigo_incrementado, descricao)
 
         connection.commit()
 
-        # Print para indicar que a inserção foi bem-sucedida
         print(f"Segmento '{descricao}' inserida com seg_codigo {seg_codigo_incrementado}.")
 
     print("\nDados inseridos com sucesso!")

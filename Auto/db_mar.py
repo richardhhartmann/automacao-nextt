@@ -35,9 +35,8 @@ def get_connection_from_file(file_name='conexao_temp.txt'):
         print(f"Erro ao conectar ao banco de dados: {e}")
         sys.exit(1)
 
-# Obtém o caminho do arquivo passado pelo VBA
 if len(sys.argv) > 1:
-    caminho_arquivo = os.path.abspath(sys.argv[1])  # Garante caminho absoluto
+    caminho_arquivo = os.path.abspath(sys.argv[1])
 else:
     print("Erro: Nenhum caminho de arquivo foi passado.")
     sys.exit(1)

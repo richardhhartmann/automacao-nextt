@@ -73,7 +73,7 @@ Sub AplicarValidacaoObrigatoria()
         .IgnoreBlank = True
         .ShowInput = True
         .ShowError = True
-        .ErrorTitle = "Valor inválido"
+        .ErrorTitle = "Valor invalido"
         .ErrorMessage = "Digite até 20 dígitos numéricos, sem espaços ou símbolos."
     End With
 
@@ -103,13 +103,13 @@ Sub AplicarValidacaoObrigatoria()
         .Add Type:=xlValidateDecimal, _
              AlertStyle:=xlValidAlertStop, _
              Operator:=xlBetween, _
-             Formula1:="1", _
+             Formula1:="0", _
              Formula2:="100"
         .IgnoreBlank = True
         .ShowInput = True
         .ShowError = True
         .ErrorTitle = "Valor invalido"
-        .ErrorMessage = "Insira um numero entre 1 e 100."
+        .ErrorMessage = "Insira um numero entre 0 e 100."
     End With
     intervaloPercentual.NumberFormat = "0.00""%"""
     

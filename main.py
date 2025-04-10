@@ -12,7 +12,17 @@ from Auto.db_connection import preencher_planilha, dados_necessarios
 from Auto.db_module import importar_modulo_vba
 from cadastro_produto import cadastrar_produto
 
-caminho_parametros = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'conexao_temp.txt')
+def resource_path(relative_path):
+    """ Retorna o caminho absoluto para recursos, tanto para desenvolvimento quanto para o executável """
+    try:
+        base_path = sys._MEIPASS  # Pasta temporária do PyInstaller
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+caminho_parametros = resource_path('conexao_temp.txt')
+pasta_modulos = resource_path('Module')
 
 def validar_campos():
     """Verifica se os campos obrigatórios estão preenchidos."""
@@ -101,11 +111,11 @@ def obter_nome_empresa():
 
 nome_empresa = obter_nome_empresa()
 
-pasta_modulos = os.path.join(os.path.dirname(__file__), "Module")
+
 
 if not os.path.exists(pasta_modulos):
     print(f"Erro: A pasta '{pasta_modulos}' não foi encontrada!")
-    exit()
+    raise SystemExit("Mensagem de erro detalhada")
 
 modulos_vba = [
     os.path.join(pasta_modulos, arquivo)
@@ -201,12 +211,18 @@ def main():
     bloquear_campos(False)
 
 def importar():
-    
     if not validar_campos():
         return
     
-    root.after(100, lambda: (cadastrar_produto()))
     mostrar_janela_carregamento()
+    
+    def executar_cadastro():
+        try:
+            cadastrar_produto()
+        finally:
+            loading_window.after(0, fechar_janela_carregamento)
+    
+    threading.Thread(target=executar_cadastro, daemon=True).start()
 
 root = tk.Tk()
 root.title("Conexão Banco de Dados")

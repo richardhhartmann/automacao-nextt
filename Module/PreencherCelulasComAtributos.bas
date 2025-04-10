@@ -88,10 +88,9 @@ Sub PreencherCelulasComAtributos()
     End If
 
     If qtdValores > 0 Then
-        colunaInicial = 26 ' Coluna Z por padrão
+        colunaInicial = 26
         ultimaColuna = colunaInicial + qtdValores - 1
         
-        ' Verifica se há espaço suficiente a partir da colunaInicial
         espacoSuficiente = False
         For j = colunaInicial To ws.Columns.Count - qtdValores
             espacoSuficiente = True
@@ -108,7 +107,6 @@ Sub PreencherCelulasComAtributos()
             End If
         Next j
         
-        ' Se não encontrou espaço, insere novas colunas na colunaInicial
         If Not espacoSuficiente Then
             ws.Columns(colunaInicial).Resize(, qtdValores).Insert Shift:=xlToRight
         End If

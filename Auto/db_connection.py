@@ -239,4 +239,4 @@ caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
 
 if not os.path.exists(caminho_arquivo):
     print(f"Arquivo não encontrado: {caminho_arquivo}")
-    exit()
+    raise SystemExit("Mensagem de erro detalhada")

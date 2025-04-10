@@ -8,47 +8,35 @@ Sub VerificarSecaoCompleta()
 
     Set ws = ThisWorkbook.Sheets("Cadastro de Produtos")
     Set dadosWs = ThisWorkbook.Sheets("Dados Consolidados")
-    
+
     ws.Calculate
 
     For Each cel In ws.Range("B7:B200")
-
-        cel.Interior.ColorIndex = xlNone
-        
         If IsEmpty(cel.Value) Then GoTo ProximaCelula
         
         valorProcurado = Trim(CStr(cel.Value))
         nomeLista = "SecaoCompleta" & Trim(CStr(ws.Range("BC" & cel.Row).Value))
-        
-        Debug.Print ">>> Linha " & cel.Row
-        Debug.Print "Valor procurado (coluna B): " & valorProcurado
-        Debug.Print "Nome da lista esperada: " & nomeLista
 
+        Set listaNomes = Nothing
         On Error Resume Next
         Set listaNomes = dadosWs.Range(nomeLista)
         On Error GoTo 0
 
-        If listaNomes Is Nothing Then
-            Debug.Print "!!! Lista nao encontrada para " & nomeLista
-            GoTo ProximaCelula
-        End If
+        If listaNomes Is Nothing Then GoTo ProximaCelula
 
         encontrado = False
-
         For Each item In listaNomes
             valorLista = Trim(CStr(item.Value))
-            Debug.Print "Comparando com: " & valorLista
-
             If valorLista = valorProcurado Then
                 encontrado = True
-                Debug.Print ">>> Valor encontrado!"
                 Exit For
             End If
         Next item
 
-        If Not encontrado Then
-            Debug.Print "!!! Valor NAO encontrado, sera limpo"
-            cel.Interior.Color = RGB(244, 204, 204)
+        If encontrado Then
+            cel.Interior.Color = RGB(221, 235, 247) 
+        Else
+            cel.Interior.Color = RGB(244, 204, 204) 
             MsgBox "Especie nao encontrada para esta secao, tente novamente.", vbExclamation, "Erro de Validacao"
             cel.ClearContents
             cel.Interior.ColorIndex = xlNone
@@ -58,6 +46,7 @@ ProximaCelula:
         Set listaNomes = Nothing
     Next cel
 End Sub
+
 
 Sub ValidarDescricoes()
     Dim ws As Worksheet, dadosWs As Worksheet
@@ -69,8 +58,6 @@ Sub ValidarDescricoes()
     Set dadosWs = ThisWorkbook.Sheets("Dados Consolidados")
 
     For Each cel In ws.Range("A7:A200")
-        cel.Interior.ColorIndex = xlNone
-
         If IsEmpty(cel.Value) Then GoTo ProximaCelula
 
         valorProcurado = Trim(CStr(cel.Value))
@@ -83,9 +70,11 @@ Sub ValidarDescricoes()
             End If
         Next celDado
 
-        If Not encontrado Then
+        If encontrado Then
+            cel.Interior.Color = RGB(221, 235, 247) 
+        Else
             cel.Interior.Color = RGB(244, 204, 204)
-            MsgBox "Secao nao encontrada para esta secao, tente novamente.", vbExclamation, "Erro de Validacao"
+            MsgBox "Secao nao encontrada na sua lista de secoes, tente novamente.", vbExclamation, "Erro de Validacao"
             cel.ClearContents
             cel.Interior.ColorIndex = xlNone
         End If

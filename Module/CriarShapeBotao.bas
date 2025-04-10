@@ -1,10 +1,18 @@
 Attribute VB_Name = "CriarShapeBotao"
 Sub CriarShapeBotao()
     Dim ws As Worksheet
+    Dim wsMarca As Worksheet
+    
     Set ws = ThisWorkbook.Sheets("Nextt")
+    Set wsMarca = ThisWorkbook.Sheets("Cadastro de Marcas")
+    
+    On Error Resume Next
+    ws.Shapes("btnShape").Delete
+    wsMarca.Shapes("cadastroMarca").Delete
+    On Error GoTo 0
 
     Dim botao As Shape
-    Set botao = ws.Shapes.AddShape(msoShapeRoundedRectangle, 100, 1000, 200, 20)
+    Set botao = ws.Shapes.AddShape(msoShapeRoundedRectangle, 100, 1075, 200, 20)
     
     With botao
         .Name = "btnShape"
@@ -23,13 +31,25 @@ Sub CriarShapeBotao()
 
         .OnAction = "ReexibirAbas.ReexibirAbas"
     End With
-End Sub
 
-Sub RemoverBotaoEspecifico()
-    Dim ws As Worksheet
-    Set ws = ThisWorkbook.Sheets("Nextt")
+    Dim cadastroMarca As Shape
+    Set cadastroMarca = wsMarca.Shapes.AddShape(msoShapeRoundedRectangle, 0, 175, 990, 15)
+    
+    With cadastroMarca
+        .Name = "cadastroMarca"
+        .TextFrame2.TextRange.Text = "Executar Cadastro"
+        .Fill.ForeColor.RGB = RGB(243, 243, 243)
+        
+        With .TextFrame2.TextRange
+            .Font.Size = 9
+            .Font.Name = "Arial"
+            .Font.Bold = msoFalse
+            .Font.Fill.ForeColor.RGB = RGB(0, 0, 0)
+        End With
 
-    On Error Resume Next
-    ws.Shapes("btnShape").Delete
-    On Error GoTo 0
+        .TextFrame2.VerticalAnchor = msoAnchorMiddle
+        .TextFrame2.TextRange.ParagraphFormat.Alignment = msoAlignCenter
+
+        .OnAction = "ExecutarCadastroMarca"
+    End With
 End Sub

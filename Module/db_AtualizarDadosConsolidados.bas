@@ -17,12 +17,16 @@ Sub AtualizarDadosConsolidados()
     Dim arquivo As Object
     Dim jsonText As String
     Dim json As Object
+    
+    frmAguarde.Show vbModeless
+    DoEvents
 
     caminhoArquivo = ThisWorkbook.Path & "\conexao_temp.txt"
 
     Set fso = CreateObject("Scripting.FileSystemObject")
     If Not fso.FileExists(caminhoArquivo) Then
         MsgBox "Arquivo de conexao nao encontrado!", vbExclamation
+        Unload frmAguarde
         Exit Sub
     End If
 
@@ -37,6 +41,7 @@ Sub AtualizarDadosConsolidados()
 
     If json Is Nothing Then
         MsgBox "Erro ao converter JSON!", vbCritical
+        Unload frmAguarde
         Exit Sub
     End If
 
@@ -54,9 +59,6 @@ Sub AtualizarDadosConsolidados()
     Debug.Print "Password: " & password
     Debug.Print "Trusted Connection: " & trusted_connection
 
-    ' Deleta o arquivo temporario
-    ' fso.DeleteFile caminhoArquivo, True
-
     If trusted_connection = "yes" Then
         connStr = "Provider=SQLOLEDB;Server=" & server & ";Database=" & database & ";Integrated Security=SSPI;"
     Else
@@ -69,12 +71,14 @@ Sub AtualizarDadosConsolidados()
     conn.Open connStr
     If Err.Number <> 0 Then
         MsgBox "Erro ao conectar ao banco de dados: " & Err.Description, vbCritical
+        Unload frmAguarde
         Exit Sub
     End If
     On Error GoTo 0
 
     If conn Is Nothing Then
         MsgBox "Erro: conexao nao foi inicializada.", vbCritical
+        Unload frmAguarde
         Exit Sub
     End If
 
@@ -82,6 +86,7 @@ Sub AtualizarDadosConsolidados()
     If ws Is Nothing Then
         MsgBox "Erro: planilha 'Dados Consolidados' nao encontrada.", vbCritical
         conn.Close
+        Unload frmAguarde
         Exit Sub
     End If
 
@@ -114,6 +119,7 @@ Sub AtualizarDadosConsolidados()
     Set conn = Nothing
 
     Call CriarIntervalosNomeadosB
+    Unload frmAguarde
 End Sub
 
 Sub AtualizarColuna(conn As Object, ws As Worksheet, query As String, coluna As Integer)
@@ -157,4 +163,3 @@ Sub AtualizarColunaComCodigo(conn As Object, ws As Worksheet, query As String, c
 
     rs.Close
 End Sub
-

@@ -24,6 +24,8 @@ Sub ReexibirAbas()
         
         Set wsNextt = ThisWorkbook.Sheets("Nextt")
         
+        wsNextt.Unprotect Password:="nexttsol"
+
         With wsNextt.Range("B13")
             .Value = "Operador:"
             .Font.Color = RGB(38, 38, 38)
@@ -33,14 +35,16 @@ Sub ReexibirAbas()
         End With
 
         wsNextt.Hyperlinks.Add Anchor:=wsNextt.Range("B15"), Address:="", SubAddress:="'Cadastro de Segmento'!A1", TextToDisplay:="Cadastro de Segmento"
-        wsNextt.Hyperlinks.Add Anchor:=wsNextt.Range("B16"), Address:="", SubAddress:="'Cadastro de Secao'!A1", TextToDisplay:="Cadastro de Seção"
-        wsNextt.Hyperlinks.Add Anchor:=wsNextt.Range("B17"), Address:="", SubAddress:="'Cadastro de Especie'!A1", TextToDisplay:="Cadastro de Espécie"
+        wsNextt.Hyperlinks.Add Anchor:=wsNextt.Range("B16"), Address:="", SubAddress:="'Cadastro de Secao'!A1", TextToDisplay:="Cadastro de Secao"
+        wsNextt.Hyperlinks.Add Anchor:=wsNextt.Range("B17"), Address:="", SubAddress:="'Cadastro de Especie'!A1", TextToDisplay:="Cadastro de Especie"
         
         With wsNextt.Range("B15:B17")
             .Interior.Color = RGB(217, 217, 217)
-            .Font.Name = "Arial"
-            .Font.Size = 10
+            ' .Font.Name = "Arial"
+            ' .Font.Size = 10
         End With
+
+        wsNextt.Protect Password:="nexttsol"
 
     Else
         MsgBox "Acesso negado.", vbCritical

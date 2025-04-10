@@ -4,13 +4,29 @@ Sub cadastro_de_secao()
     Dim caminhoArquivo As String
     Dim caminhoPython As String
     Dim comando As String
+    Dim ws As Worksheet
+    Dim celula As Range
+    Dim temValor As Boolean
+
+    Set ws = ThisWorkbook.Sheets("Cadastro de Secao")
+    For Each celula In ws.Range("A7:A200")
+        If Trim(celula.Value) <> "" Then
+            temValor = True
+            Exit For
+        End If
+    Next celula
     
+    If Not temValor Then
+        MsgBox "Nenhum valor encontrado para ser cadastrado.", vbExclamation, "Aviso"
+        Exit Sub
+    End If
+
     caminhoArquivo = ThisWorkbook.FullName
     
     caminhoPython = GetPythonPath()
     
     If caminhoPython = "" Then
-        MsgBox "Python nao encontrado! Certifique-se de que esta instalado e no PATH.", vbCritical, "Erro"
+        MsgBox "Python nao encontrado! Certifique-se de que esta instalado e no PATH.", vbCritical, "Erro"        
         Exit Sub
     End If
 
@@ -22,6 +38,7 @@ Sub cadastro_de_secao()
     objShell.Run comando, 1, True
     
     Set objShell = Nothing
+    Call AtualizarDadosConsolidados
 End Sub
 
 Function GetPythonPath() As String
