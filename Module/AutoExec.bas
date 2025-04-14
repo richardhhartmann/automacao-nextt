@@ -6,12 +6,20 @@ Private Sub Workbook_Open()
     Dim shp As Shape
     
     Call AtualizarDadosConsolidados
-    Call GerarFormulaDinamica.GerarFormulaDinamica
-    Call PreencherCelulasComAtributos.PreencherCelulasComAtributos
-    Call BloquearTodasAbas.BloquearTodasAbas
-    Call BloquearTodasAbas.BloquearCadastroProdutos
-    Call OcultarAbasProtegidas.OcultarAbasProtegidas
-    Call CriarShapeBotao.CriarShapeBotao
+
+    If Not Sheets("Nextt").Range("O3").Value Like "Importado*" Then
+        Call GerarFormulaDinamica.GerarFormulaDinamica  
+        Call PreencherCelulasComAtributos.PreencherCelulasComAtributos
+        Call BloquearTodasAbas.BloquearTodasAbas
+        Call BloquearTodasAbas.BloquearCadastroProdutos
+        Call BloquearTodasAbas.BloquearCadastroMarcas
+        Call OcultarAbasProtegidas.OcultarAbasProtegidas
+        Call CriarShapeBotao.CriarShapeBotao
+
+        Sheets("Nextt").Range("O3").Value = "Importado em " & Now
+        Sheets("Nextt").Range("O3").Interior.Color = RGB(180, 198, 231)
+
+    End If
     
     Set ws = ThisWorkbook.Sheets("Nextt")
     

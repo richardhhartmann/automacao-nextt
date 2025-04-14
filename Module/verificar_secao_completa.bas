@@ -11,7 +11,7 @@ Sub VerificarSecaoCompleta()
 
     ws.Calculate
 
-    For Each cel In ws.Range("B7:B200")
+    For Each cel In ws.Range("B7:B1007")
         If IsEmpty(cel.Value) Then GoTo ProximaCelula
         
         valorProcurado = Trim(CStr(cel.Value))
@@ -57,7 +57,7 @@ Sub ValidarDescricoes()
     Set ws = ThisWorkbook.Sheets("Cadastro de Produtos")
     Set dadosWs = ThisWorkbook.Sheets("Dados Consolidados")
 
-    For Each cel In ws.Range("A7:A200")
+    For Each cel In ws.Range("A7:A1007")
         If IsEmpty(cel.Value) Then GoTo ProximaCelula
 
         valorProcurado = Trim(CStr(cel.Value))

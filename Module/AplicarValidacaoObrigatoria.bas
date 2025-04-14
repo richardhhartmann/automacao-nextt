@@ -24,7 +24,7 @@ Sub AplicarValidacaoObrigatoria()
     ultimaColuna = 17
     linhaObrigatorio = 4
     linhaInicioValidacao = 7
-    linhaFimValidacao = 200
+    linhaFimValidacao = 1007
 
     For coluna = 1 To ultimaColuna
         If ws.Cells(linhaObrigatorio, coluna).Value = "Obrigatorio" Then
@@ -51,7 +51,7 @@ Sub AplicarValidacaoObrigatoria()
         End If
         Dim intervaloLimite As Range
     
-    Set intervaloLimite = ws.Range("C7:C200,D7:D200,F7:F200,G7:G200")
+    Set intervaloLimite = ws.Range("C7:C1007,D7:D1007,F7:F1007,G7:G1007")
     intervaloLimite.Validation.Delete
     
     With intervaloLimite.Validation
@@ -63,7 +63,7 @@ Sub AplicarValidacaoObrigatoria()
         .ErrorMessage = "O texto inserido excede o tamanho maximo permitido para esta celula."
     End With
 
-    Set EANLimite = ws.Range("Q7:Q200")
+    Set EANLimite = ws.Range("Q7:Q1007")
     EANLimite.Validation.Delete
     
     With EANLimite.Validation
@@ -74,12 +74,12 @@ Sub AplicarValidacaoObrigatoria()
         .ShowInput = True
         .ShowError = True
         .ErrorTitle = "Valor invalido"
-        .ErrorMessage = "Digite até 20 dígitos numéricos, sem espaços ou símbolos."
+        .ErrorMessage = "Digite ate 20 digitos numericos, sem espaços ou simbolos."
     End With
 
     EANLimite.NumberFormat = "@"
 
-    Set intervaloNumerico = ws.Range("M7:M200")
+    Set intervaloNumerico = ws.Range("M7:M1007")
     intervaloNumerico.Validation.Delete
     
     With intervaloNumerico.Validation
@@ -97,7 +97,7 @@ Sub AplicarValidacaoObrigatoria()
     
     intervaloNumerico.NumberFormat = """R$"" #,##0.00"
     
-    Set intervaloPercentual = ws.Range("N7:N200, O7:O200")
+    Set intervaloPercentual = ws.Range("N7:N1007, O7:O1007")
     intervaloPercentual.Validation.Delete
     With intervaloPercentual.Validation
         .Add Type:=xlValidateDecimal, _
@@ -113,7 +113,7 @@ Sub AplicarValidacaoObrigatoria()
     End With
     intervaloPercentual.NumberFormat = "0.00""%"""
     
-    Set atributoLimite = ws.Range("R7:BB200")
+    Set atributoLimite = ws.Range("R7:BB1007")
     atributoLimite.Validation.Delete
     
     With atributoLimite.Validation
@@ -128,16 +128,16 @@ Sub AplicarValidacaoObrigatoria()
 Proximo:
     Next coluna
 
-    AplicarListaSuspensa ws, wsDados, "A7:A200", "A1:A100000"
-    AplicarListaSuspensa ws, wsDados, "E7:E200", "E1:E100000"
-    AplicarListaSuspensa ws, wsDados, "H7:H200", "H1:H100000"
-    AplicarListaSuspensa ws, wsDados, "J7:J200", "J1:J100000"
-    AplicarListaSuspensa ws, wsDados, "K7:K200", "K1:K100000"
-    AplicarListaSuspensa ws, wsDados, "L7:L200", "L1:L100000"
-    AplicarListaSuspensa ws, wsDados, "P7:P200", "P1:P100000"
+    AplicarListaSuspensa ws, wsDados, "A7:A1007", "A1:A100700"
+    AplicarListaSuspensa ws, wsDados, "E7:E1007", "E1:E100700"
+    AplicarListaSuspensa ws, wsDados, "H7:H1007", "H1:H100700"
+    AplicarListaSuspensa ws, wsDados, "J7:J1007", "J1:J100700"
+    AplicarListaSuspensa ws, wsDados, "K7:K1007", "K1:K100700"
+    AplicarListaSuspensa ws, wsDados, "L7:L1007", "L1:L100700"
+    AplicarListaSuspensa ws, wsDados, "P7:P1007", "P1:P100700"
 
-    AplicarListaSuspensa wsSecao, wsDados, "B7:B200", "AR1:AR100000"
-    AplicarListaSuspensa wsEspecie, wsDados, "B7:B200", "A1:A100000"
+    AplicarListaSuspensa wsSecao, wsDados, "B7:B1007", "AR1:AR100700"
+    AplicarListaSuspensa wsEspecie, wsDados, "B7:B1007", "A1:A100700"
 
 End Sub
 

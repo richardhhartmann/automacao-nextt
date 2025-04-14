@@ -3,10 +3,10 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Dim FoundCell As Range
     ThisWorkbook.Save
 
-    If Not Intersect(Target, Me.Range("A7:A200")) Is Nothing Then
+    If Not Intersect(Target, Me.Range("A7:A1007")) Is Nothing Then
         If Trim(Target.Value) = "" Then Exit Sub
         
-        Set CheckRange = Worksheets("Dados Consolidados").Range("AV1:AV100000")
+        Set CheckRange = Worksheets("Dados Consolidados").Range("AV1:AV100700")
         Set FoundCell = CheckRange.Find(Target.Value, LookIn:=xlValues)
 
         If Not FoundCell Is Nothing Then

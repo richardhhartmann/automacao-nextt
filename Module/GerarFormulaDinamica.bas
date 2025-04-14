@@ -11,9 +11,9 @@ Sub GerarFormulaDinamica()
     
     ultimaColuna = ws.Cells(4, ws.Columns.Count).End(xlToLeft).Column
     
-    Set rng = ws.Range("BK7:BK200")
+    Set rng = ws.Range("BK7:BK1007")
     
-    For linha = 7 To 200
+    For linha = 7 To 1007
         condicao = "SE(E("
         
         For col = 1 To ultimaColuna

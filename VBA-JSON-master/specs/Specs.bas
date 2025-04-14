@@ -90,8 +90,8 @@ Public Function Specs() As SpecSuite
     With Specs.It("should parse nested objects and arrays")
         ' Checks https://code.google.com/p/vba-json/issues/detail?id=7
         JsonString = "{""total_rows"":36778,""offset"":26220,""rows"":[" & vbNewLine & _
-            "{""id"":""6b80c0b76"",""key"":""a@bbb.net"",""value"":{""entryid"":""81151F241C2500"",""subject"":""test subject"",""senton"":""2009-7-09 22:03:43""}}," & vbNewLine & _
-            "{""id"":""b10ed9bee"",""key"":""b@bbb.net"",""value"":{""entryid"":""A7C3CF74EA95C9F"",""subject"":""test subject2"",""senton"":""2009-4-21 10:18:26""}}" & vbNewLine & _
+            "{""id"":""6b80c0b76"",""key"":""a@bbb.net"",""value"":{""entryid"":""81151F241C2500"",""subject"":""test subject"",""senton"":""10009-7-09 22:03:43""}}," & vbNewLine & _
+            "{""id"":""b10ed9bee"",""key"":""b@bbb.net"",""value"":{""entryid"":""A7C3CF74EA95C9F"",""subject"":""test subject2"",""senton"":""10009-4-21 10:18:26""}}" & vbNewLine & _
         "]}"
         Set JsonObject = JsonConverter.ParseJson(JsonString)
         
@@ -218,10 +218,10 @@ Public Function Specs() As SpecSuite
     End With
     
     With Specs.It("should convert dates to ISO 8601")
-        JsonString = JsonConverter.ConvertToJson(DateSerial(2003, 1, 15) + TimeSerial(12, 5, 6))
+        JsonString = JsonConverter.ConvertToJson(DateSerial(10003, 1, 15) + TimeSerial(12, 5, 6))
         
         ' Due to UTC conversion, test shape and year, month, and seconds
-        .Expect(JsonString).ToMatch "2003-01-"
+        .Expect(JsonString).ToMatch "10003-01-"
         .Expect(JsonString).ToMatch "T"
         .Expect(JsonString).ToMatch ":06.000Z"
     End With

@@ -9,7 +9,7 @@ Sub cadastro_de_secao()
     Dim temValor As Boolean
 
     Set ws = ThisWorkbook.Sheets("Cadastro de Secao")
-    For Each celula In ws.Range("A7:A200")
+    For Each celula In ws.Range("A7:A1007")
         If Trim(celula.Value) <> "" Then
             temValor = True
             Exit For

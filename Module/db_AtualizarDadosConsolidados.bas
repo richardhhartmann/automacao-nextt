@@ -1,87 +1,30 @@
 Attribute VB_Name = "db_AtualizarDadosConsolidados"
+Option Explicit
+
 Sub AtualizarDadosConsolidados()
     Dim conn As Object
-    Dim rs As Object
     Dim ws As Worksheet
-    Dim query As String
-    Dim linha As Long
     Dim connStr As String
-    Dim caminhoArquivo As String
-    Dim driver As String
-    Dim server As String
-    Dim database As String
-    Dim username As String
-    Dim password As String
-    Dim trusted_connection As String
+    Dim jsonConfig As Object
+    Dim startTime As Double
     Dim fso As Object
-    Dim arquivo As Object
-    Dim jsonText As String
-    Dim json As Object
+    
+    startTime = Timer
     
     frmAguarde.Show vbModeless
     DoEvents
-
-    caminhoArquivo = ThisWorkbook.Path & "\conexao_temp.txt"
-
-    Set fso = CreateObject("Scripting.FileSystemObject")
-    If Not fso.FileExists(caminhoArquivo) Then
-        MsgBox "Arquivo de conexao nao encontrado!", vbExclamation
+    
+    If Not CarregarConfiguracoes(jsonConfig) Then
         Unload frmAguarde
         Exit Sub
     End If
-
-    Set arquivo = fso.OpenTextFile(caminhoArquivo, 1)
-    jsonText = arquivo.ReadAll
-    arquivo.Close
-
-    jsonText = Replace(jsonText, ": null", ": """"")
-    jsonText = Replace(jsonText, ":null", ": """"")
-
-    Set json = JsonConverter.ParseJson(jsonText)
-
-    If json Is Nothing Then
-        MsgBox "Erro ao converter JSON!", vbCritical
+    
+    connStr = MontarStringConexao(jsonConfig)
+    If Not ConectarBanco(conn, connStr) Then
         Unload frmAguarde
         Exit Sub
     End If
-
-    driver = json("driver")
-    server = json("server")
-    database = json("database")
-    username = json("username")
-    password = json("password")
-    trusted_connection = json("trusted_connection")
-
-    Debug.Print "Driver: " & driver
-    Debug.Print "Server: " & server
-    Debug.Print "Database: " & database
-    Debug.Print "Username: " & username
-    Debug.Print "Password: " & password
-    Debug.Print "Trusted Connection: " & trusted_connection
-
-    If trusted_connection = "yes" Then
-        connStr = "Provider=SQLOLEDB;Server=" & server & ";Database=" & database & ";Integrated Security=SSPI;"
-    Else
-        connStr = "Provider=SQLOLEDB;Server=" & server & ";Database=" & database & ";UID=" & username & ";PWD=" & password & ";"
-    End If
-
-    Set conn = CreateObject("ADODB.Connection")
-
-    On Error Resume Next
-    conn.Open connStr
-    If Err.Number <> 0 Then
-        MsgBox "Erro ao conectar ao banco de dados: " & Err.Description, vbCritical
-        Unload frmAguarde
-        Exit Sub
-    End If
-    On Error GoTo 0
-
-    If conn Is Nothing Then
-        MsgBox "Erro: conexao nao foi inicializada.", vbCritical
-        Unload frmAguarde
-        Exit Sub
-    End If
-
+    
     Set ws = ThisWorkbook.Sheets("Dados Consolidados")
     If ws Is Nothing Then
         MsgBox "Erro: planilha 'Dados Consolidados' nao encontrada.", vbCritical
@@ -89,77 +32,164 @@ Sub AtualizarDadosConsolidados()
         Unload frmAguarde
         Exit Sub
     End If
-
-    ws.Range("A1:A10000").ClearContents
-    ws.Range("B1:B10000").ClearContents
-    ws.Range("E1:E10000").ClearContents
-    ws.Range("R1:R10000").ClearContents
-    ws.Range("S1:S10000").ClearContents
-    ws.Range("T1:T10000").ClearContents
-    ws.Range("AR1:AR10000").ClearContents
-    ws.Range("AS1:AS10000").ClearContents
-    ws.Range("AT1:AT10000").ClearContents
-    ws.Range("AV1:AV10000").ClearContents
-    ws.Range("AW1:AW10000").ClearContents
-
-    AtualizarColuna conn, ws, "SELECT seg_descricao FROM tb_segmento", 44
-    AtualizarColunaComCodigo conn, ws, "SELECT seg_codigo FROM tb_segmento", 45
-    AtualizarColunaComCodigo conn, ws, "SELECT sec_codigo FROM tb_secao", 18
-    AtualizarColuna conn, ws, "SELECT CONCAT(sec_codigo, ' - ', sec_descricao) AS descricao_completa FROM tb_secao", 1
-    AtualizarColuna conn, ws, "SELECT sec_descricao FROM tb_secao", 48
-    AtualizarColunaComCodigo conn, ws, "SELECT CAST(esp_codigo AS VARCHAR) AS descricao_completa FROM tb_especie ORDER BY (SELECT NULL)", 19
-    AtualizarColuna conn, ws, "SELECT CAST(esp_codigo AS VARCHAR) + ' - ' + LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))) AS descricao_completa FROM tb_especie", 2
-    AtualizarColuna conn, ws, "SELECT LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))) AS descricao FROM tb_especie", 49
-    AtualizarColuna conn, ws, "SELECT CONCAT(mar_codigo, ' - ', mar_descricao) AS descricao_completa FROM tb_marca", 5
-    AtualizarColuna conn, ws, "SELECT mar_codigo FROM tb_marca", 20
-    AtualizarColuna conn, ws, "SELECT mar_descricao FROM tb_marca", 46
-
+    
+    LimparIntervalosPlanilha ws
+    
+    ExecutarAtualizacoes conn, ws
+    
     conn.Close
-    Set rs = Nothing
     Set conn = Nothing
-
+    
     Call CriarIntervalosNomeadosB
     Unload frmAguarde
+    
+    Debug.Print "Tempo total de execuçao: " & Round(Timer - startTime, 2) & " segundos"
 End Sub
 
-Sub AtualizarColuna(conn As Object, ws As Worksheet, query As String, coluna As Integer)
+Private Function CarregarConfiguracoes(ByRef jsonConfig As Object) As Boolean
+    Dim caminhoArquivo As String
+    Dim fso As Object
+    Dim arquivo As Object
+    Dim jsonText As String
+    
+    On Error GoTo ErroHandler
+    
+    caminhoArquivo = ThisWorkbook.Path & "\conexao_temp.txt"
+    
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    If Not fso.FileExists(caminhoArquivo) Then
+        MsgBox "Arquivo de conexao nao encontrado!", vbExclamation
+        Exit Function
+    End If
+    
+    Set arquivo = fso.OpenTextFile(caminhoArquivo, 1)
+    jsonText = arquivo.ReadAll
+    arquivo.Close
+    
+    jsonText = Replace(jsonText, ": null", ": """"")
+    jsonText = Replace(jsonText, ":null", ": """"")
+    
+    Set jsonConfig = JsonConverter.ParseJson(jsonText)
+    
+    If jsonConfig Is Nothing Then
+        MsgBox "Erro ao converter JSON!", vbCritical
+        Exit Function
+    End If
+    
+    Debug.Print "Configuraçoes carregadas:"
+    Debug.Print "Driver: " & jsonConfig("driver")
+    Debug.Print "Server: " & jsonConfig("server")
+    Debug.Print "Database: " & jsonConfig("database")
+    Debug.Print "Username: " & jsonConfig("username")
+    Debug.Print "Trusted Connection: " & jsonConfig("trusted_connection")
+    
+    CarregarConfiguracoes = True
+    Exit Function
+    
+ErroHandler:
+    MsgBox "Erro ao carregar configuraçoes: " & Err.Description, vbCritical
+    CarregarConfiguracoes = False
+End Function
+
+Private Function MontarStringConexao(jsonConfig As Object) As String
+    If LCase(jsonConfig("trusted_connection")) = "yes" Then
+        MontarStringConexao = "Provider=SQLOLEDB;Server=" & jsonConfig("server") & _
+                              ";Database=" & jsonConfig("database") & _
+                              ";Integrated Security=SSPI;"
+    Else
+        MontarStringConexao = "Provider=SQLOLEDB;Server=" & jsonConfig("server") & _
+                             ";Database=" & jsonConfig("database") & _
+                             ";UID=" & jsonConfig("username") & _
+                             ";PWD=" & jsonConfig("password") & ";"
+    End If
+End Function
+
+Private Function ConectarBanco(ByRef conn As Object, connStr As String) As Boolean
+    On Error GoTo ErroHandler
+    
+    Set conn = CreateObject("ADODB.Connection")
+    conn.Open connStr
+    
+    ConectarBanco = True
+    Exit Function
+    
+ErroHandler:
+    MsgBox "Erro ao conectar ao banco de dados: " & Err.Description, vbCritical
+    ConectarBanco = False
+End Function
+
+Private Sub LimparIntervalosPlanilha(ws As Worksheet)
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    
+    With ws
+        .Range("A1:A10070,B1:B10070,E1:E10070,R1:T10070,AR1:AS10070,AT1:AT10070,AV1:AW10070").ClearContents
+    End With
+    
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+End Sub
+
+Private Sub ExecutarAtualizacoes(conn As Object, ws As Worksheet)
+    ' Segmento
+    AtualizarColuna conn, ws, "SELECT seg_descricao, seg_codigo FROM tb_segmento", Array(44, 45)
+    
+    ' Seção
+    AtualizarColuna conn, ws, "SELECT CONCAT(sec_codigo, ' - ', sec_descricao), sec_descricao, sec_codigo FROM tb_secao", Array(1, 48, 18)
+    
+    ' Espécie
+    AtualizarColuna conn, ws, "SELECT CAST(esp_codigo AS VARCHAR) + ' - ' + LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))), " & _
+                              "LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))), " & _
+                              "CAST(esp_codigo AS VARCHAR) FROM tb_especie", Array(2, 49, 19)
+    
+    ' Marca
+    AtualizarColuna conn, ws, "SELECT CONCAT(mar_codigo, ' - ', mar_descricao), mar_descricao, mar_codigo FROM tb_marca", Array(5, 46, 20)
+End Sub
+
+Private Sub AtualizarColuna(conn As Object, ws As Worksheet, query As String, colunas As Variant)
     Dim rs As Object
     Dim linha As Long
-    linha = 1
-
+    Dim i As Integer
+    Dim startTime As Double
+    
+    On Error GoTo ErroHandler
+    
+    startTime = Timer
+    
     Set rs = conn.Execute(query)
     
-    If rs Is Nothing Then
+    If rs Is Nothing Or rs.State = 0 Then
         MsgBox "Erro: consulta SQL falhou.", vbCritical
         Exit Sub
     End If
     
-    Do While Not rs.EOF
-        ws.Cells(linha, coluna).Value = rs.Fields(0).Value
-        linha = linha + 1
-        rs.MoveNext
-    Loop
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
     
-    rs.Close
-End Sub
-
-Sub AtualizarColunaComCodigo(conn As Object, ws As Worksheet, query As String, coluna As Integer)
-    Dim rs As Object
-    Dim linha As Long
     linha = 1
-
-    Set rs = conn.Execute(query)
-    
-    If rs Is Nothing Then
-        MsgBox "Erro: consulta SQL falhou.", vbCritical
-        Exit Sub
-    End If
-
     Do While Not rs.EOF
-        ws.Cells(linha, coluna).Value = rs.Fields(0).Value
+        For i = LBound(colunas) To UBound(colunas)
+            If i <= rs.Fields.Count - 1 Then
+                ws.Cells(linha, colunas(i)).Value = rs.Fields(i).Value
+            End If
+        Next i
         linha = linha + 1
         rs.MoveNext
     Loop
-
-    rs.Close
+    
+    Debug.Print "Consulta '" & Left(query, 30) & "...' concluida em " & Round(Timer - startTime, 2) & "s"
+    
+Finalizar:
+    If Not rs Is Nothing Then
+        If rs.State = 1 Then rs.Close
+        Set rs = Nothing
+    End If
+    
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+    Exit Sub
+    
+ErroHandler:
+    MsgBox "Erro em AtualizarColuna: " & Err.Description, vbCritical
+    Resume Finalizar
 End Sub

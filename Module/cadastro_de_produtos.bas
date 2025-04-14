@@ -6,7 +6,7 @@ Dim valorAnterior As Variant
 Dim corFundoAnterior As Variant
 
 Private Sub Worksheet_SelectionChange(ByVal Target As Range)
-    If Not Intersect(Target, Me.Range("C7:D200,G7:G200")) Is Nothing Then
+    If Not Intersect(Target, Me.Range("C7:D1007,G7:G1007")) Is Nothing Then
         If Target.Cells.Count = 1 Then
             valorAnterior = Target.Value
             corFundoAnterior = Target.Interior.Color
@@ -15,6 +15,14 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
 End Sub
 
 Private Sub Worksheet_Change(ByVal Target As Range)
+    On Error GoTo TratarErro
+    Application.EnableEvents = False
+
+    If Not Me.Name = "Cadastro de Produtos" Then GoTo Finalizar
+    
+    Call VerificarSecaoEspecie.VerificarSecaoCompleta
+    Call VerificarSecaoEspecie.ValidarDescricoes
+
     Dim CheckRange As Range
     Dim FoundCell As Range
     Dim cel As Range
@@ -26,10 +34,10 @@ Private Sub Worksheet_Change(ByVal Target As Range)
 
     deveSalvar = False
 
-    If Not Intersect(Target, Me.Range("A7:BB200")) Is Nothing Then
+    If Not Intersect(Target, Me.Range("A7:BB1007")) Is Nothing Then
         For Each cel In Target.Cells
             linha = cel.Row
-            If linha >= 7 And linha <= 200 Then
+            If linha >= 7 And linha <= 1007 Then
                 If Trim(UCase(Me.Cells(linha, "BK").Value)) = "OK" Then
                     deveSalvar = True
                     Exit For
@@ -38,11 +46,9 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         Next cel
     End If
 
-    If deveSalvar Then
-        ThisWorkbook.Save
-    End If
+    If deveSalvar Then ThisWorkbook.Save
 
-    If Not Intersect(Target, Me.Range("F7:F200")) Is Nothing Then
+    If Not Intersect(Target, Me.Range("F7:F1007")) Is Nothing Then
         If Target.Cells.Count > 1 Then
             Dim c As Range, todasVazias As Boolean
             todasVazias = True
@@ -52,65 +58,37 @@ Private Sub Worksheet_Change(ByVal Target As Range)
                     Exit For
                 End If
             Next c
-            If todasVazias Then Exit Sub
+            If todasVazias Then GoTo Finalizar
         Else
-            If Trim(Target.Value) = "" Then Exit Sub
+            If Trim(Target.Value) = "" Then GoTo Finalizar
         End If
 
-
-        Set CheckRange = Worksheets("Dados Consolidados").Range("AU1:AU100000")
+        Set CheckRange = Worksheets("Dados Consolidados").Range("AU1:AU100700")
         Set FoundCell = CheckRange.Find(Target.Value, LookIn:=xlValues)
 
         If Not FoundCell Is Nothing Then
             MsgBox "O valor digitado ja existe no banco de dados. Tente novamente.", vbExclamation
-            Application.EnableEvents = False
             Target.ClearContents
-            Application.EnableEvents = True
-            Exit Sub
+            GoTo Finalizar
         End If
     End If
 
-    If Not Intersect(Target, Me.Range("A7:A200, B7:B200, BC7:BC200, BD7:BD200")) Is Nothing Then
-        Application.EnableEvents = False
-        Call VerificarSecaoEspecie.VerificarSecaoCompleta
-        Call VerificarSecaoEspecie.ValidarDescricoes
-        Application.EnableEvents = True
+    If Not Intersect(Target, Me.Range("A7:A1007")) Is Nothing _
+        Or Not Intersect(Target, Me.Range("B7:B1007")) Is Nothing _
+        Or Not Intersect(Target, Me.Range("BC7:BC1007")) Is Nothing _
+        Or Not Intersect(Target, Me.Range("BD7:BD1007")) Is Nothing Then
+
     End If
-
-    Set rng = Union(Me.Range("C7:C200"), Me.Range("D7:D200"), Me.Range("E7:E200"), _
-                    Me.Range("F7:F200"), Me.Range("H7:H200"), Me.Range("J7:J200"), _
-                    Me.Range("K7:K200"), Me.Range("L7:L200"), Me.Range("M7:M200"), _
-                    Me.Range("N7:N200"), Me.Range("O7:O200"), Me.Range("P7:P200"))
-
-    Application.EnableEvents = False
-
-    For Each cel In rng
-        If Not Intersect(Target, cel) Is Nothing Then
-            If Trim(cel.Value) = "" Then
-                MsgBox "A célula não pode ficar vazia após ser editada.", vbExclamation, "Erro"
-                cel.Value = valorAnterior
-                cel.Interior.Color = corFundoAnterior
-                GoTo Finalizar
-            End If
-        End If
-    Next cel
-
-    Set intervaloPreenchimento = Me.Range("A7:BB200")
-    If Not Intersect(Target, intervaloPreenchimento) Is Nothing Then
-        For Each celula In Intersect(Target, intervaloPreenchimento)
-            If Trim(celula.Value) <> "" Then
-                If celula.Interior.Color <> RGB(244, 204, 204) Then
-                    celula.Interior.Color = RGB(221, 235, 247)
-                End If
-            Else
-                celula.Interior.ColorIndex = xlNone
-            End If
-        Next celula
-    End If
-
 
 Finalizar:
     Application.EnableEvents = True
+    Exit Sub
+
+TratarErro:
+    MsgBox "Erro durante a execuçao do evento de alteraçao: " & Err.Description, vbCritical
+    Resume Finalizar
 End Sub
+
+
 
 

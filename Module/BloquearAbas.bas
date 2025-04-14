@@ -5,7 +5,7 @@ Sub BloquearTodasAbas()
     Dim i As Integer
     Dim btn As Shape
     
-    abasParaBloquear = Array("Nextt")
+    abasParaBloquear = Array("Nextt", "Cadastro de Pedidos")
     
     For i = LBound(abasParaBloquear) To UBound(abasParaBloquear)
         On Error Resume Next
@@ -61,11 +61,20 @@ Sub BloquearCadastroProdutos()
 
     Dim ultimaLinha As Long
     ultimaLinha = ws.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
-    If ultimaLinha < 7 Then ultimaLinha = 1000
+    If ultimaLinha < 7 Then ultimaLinha = 1007
 
     Dim faixaBloqueio As String
     faixaBloqueio = inicioBloqueioColuna & "7:XFD" & ultimaLinha
     ws.Range(faixaBloqueio).Locked = True
 
+    ws.Protect password:="nexttsol", UserInterfaceOnly:=True
+End Sub
+
+Sub BloquearCadastroMarcas()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Cadastro de Marcas")
+    ws.Unprotect password:="nexttsol"
+    ws.Cells.Locked = False
+    ws.Range("A1:A5").Locked = True
     ws.Protect password:="nexttsol", UserInterfaceOnly:=True
 End Sub
