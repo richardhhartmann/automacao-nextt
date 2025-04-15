@@ -1,67 +1,71 @@
 Private Sub Workbook_Open()
     Dim ws As Worksheet
-    Dim Segmentows As Worksheet
     Dim imageFolder As String
-    Dim brandPath As String, uploadPath As String
+    Dim brandPath As String, uploadPath As String, refreshPath As String
     Dim shp As Shape
     
-    Call AtualizarDadosConsolidados
-
-    If Not Sheets("Nextt").Range("O3").Value Like "Importado*" Then
-        Call GerarFormulaDinamica.GerarFormulaDinamica  
-        Call PreencherCelulasComAtributos.PreencherCelulasComAtributos
-        Call BloquearTodasAbas.BloquearTodasAbas
-        Call BloquearTodasAbas.BloquearCadastroProdutos
-        Call BloquearTodasAbas.BloquearCadastroMarcas
-        Call OcultarAbasProtegidas.OcultarAbasProtegidas
-        Call CriarShapeBotao.CriarShapeBotao
-
-        Sheets("Nextt").Range("O3").Value = "Importado em " & Now
-        Sheets("Nextt").Range("O3").Interior.Color = RGB(180, 198, 231)
-
-    End If
-    
     Set ws = ThisWorkbook.Sheets("Nextt")
-    
-    On Error Resume Next
-    Set Segmentows = ThisWorkbook.Sheets("Cadastro de Segmento")
-    On Error GoTo 0
-    
     imageFolder = ThisWorkbook.Path & "\"
     brandPath = imageFolder & "brand.png"
     uploadPath = imageFolder & "upload.png"
+    refreshPath = imageFolder & "refresh.png"
     
-    For Each shp In ws.Shapes
-        If shp.Name = "BrandImage" Or shp.Name = "UploadImage" Then
-            shp.Delete
-        End If
-    Next shp
-    
-    If Dir(brandPath) <> "" Then
-        With ws.Shapes.AddPicture( _
-            Filename:=brandPath, _
-            LinkToFile:=msoFalse, _
-            SaveWithDocument:=msoTrue, _
-            Left:=ws.Range("B2").Left, _
-            Top:=ws.Range("B2").Top - 5, _
-            Width:=-1, Height:=-1)
-            .Name = "BrandImage"
-            .LockAspectRatio = msoTrue
-            .Width = 90
-        End With
-    End If
-    
-    If Dir(uploadPath) <> "" Then
-        With ws.Shapes.AddPicture( _
-            Filename:=uploadPath, _
-            LinkToFile:=msoFalse, _
-            SaveWithDocument:=msoTrue, _
-            Left:=ws.Range("I10").Left, _
-            Top:=ws.Range("I10").Top - 12, _
-            Width:=-1, Height:=-1)
-            .Name = "UploadImage"
-            .Width = 40
-        End With
-    End If
-End Sub
+    With ws
+        If Not .Range("O3").Value Like "Atualizado*" Then
+            Call AtualizarDadosConsolidados
+            Call GerarFormulaDinamica.GerarFormulaDinamica
+            Call PreencherCelulasComAtributos.PreencherCelulasComAtributos
+            Call BloquearTodasAbas.BloquearTodasAbas
+            Call BloquearTodasAbas.BloquearCadastroProdutos
+            Call BloquearTodasAbas.BloquearCadastroMarcas
+            Call OcultarAbasProtegidas.OcultarAbasProtegidas
+            Call CriarShapeBotao.CriarShapeBotao
 
+            Application.EnableEvents = False
+            With ThisWorkbook.Sheets("Nextt").Range("O3")
+                .Value = "Atualizado em " & Now
+                .Interior.Color = RGB(180, 198, 231)
+                .Font.Color = RGB(102, 102, 102)
+            End With
+            Application.EnableEvents = True
+        Else
+            Call AtualizarInterface.AtualizarInterface
+        End If
+
+        ' Remove imagens antigas
+        For Each shp In .Shapes
+            If shp.Name = "BrandImage" Or shp.Name = "UploadImage" Or shp.Name = "RefreshImage" Then shp.Delete
+        Next shp
+
+        ' Adiciona BrandImage
+        If Dir(brandPath) <> "" Then
+            .Unprotect password:="nexttsol"
+            With .Shapes.AddPicture(brandPath, msoFalse, msoTrue, .Range("B2").Left, .Range("B2").Top - 5, -1, -1)
+                .Name = "BrandImage"
+                .LockAspectRatio = msoTrue
+                .Width = 90
+            End With
+            .Protect password:="nexttsol", UserInterfaceOnly:=True
+        Else
+            MsgBox "A imagem 'brand.png' nao foi encontrada em: " & brandPath
+        End If
+
+        ' Upload Image
+        If Dir(uploadPath) <> "" Then
+            With .Shapes.AddPicture(uploadPath, msoFalse, msoTrue, .Range("I10").Left, .Range("I10").Top - 12, -1, -1)
+                .Name = "UploadImage"
+                .Width = 40
+            End With
+        End If
+
+        ' Refresh Image
+        If Dir(refreshPath) <> "" Then
+            With .Shapes.AddPicture(refreshPath, msoFalse, msoTrue, .Range("N3").Left + 15, .Range("N3").Top, -1, -1)
+                .Name = "RefreshImage"
+                .LockAspectRatio = msoTrue
+                .Width = 20
+                .OnAction = "AtualizarInterface.AtualizarInterface"
+            End With
+        End If
+    End With
+End Sub

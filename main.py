@@ -5,17 +5,16 @@ import threading
 import sys
 import os
 import pyodbc
-from io import StringIO
 from tkinter import font, Toplevel
 from PIL import Image, ImageTk
-from Auto.db_connection import preencher_planilha, dados_necessarios
+from Auto.db_connection import preencher_planilha
 from Auto.db_module import importar_modulo_vba
 from cadastro_produto import cadastrar_produto
 
 def resource_path(relative_path):
     """ Retorna o caminho absoluto para recursos, tanto para desenvolvimento quanto para o executável """
     try:
-        base_path = sys._MEIPASS  # Pasta temporária do PyInstaller
+        base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
 
@@ -195,10 +194,9 @@ def bloquear_campos(bloquear):
 
 def main():
     root.iconify()
-    dados = dados_necessarios(caminho_arquivo)
-    
+
     print("Preenchendo planilha...")
-    preencher_planilha(dados, caminho_arquivo)
+    preencher_planilha(caminho_arquivo)
     
     print("Planilha preenchida com sucesso.") 
     importar_modulo_vba(caminho_novo_arquivo, modulos_vba, pasta_modulos)

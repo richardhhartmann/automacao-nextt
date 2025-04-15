@@ -9,7 +9,7 @@ from openpyxl.drawing.image import Image
 from tqdm import tqdm
 import sys
 
-DEBUG = True 
+DEBUG = False 
 caminho_parametros = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'conexao_temp.txt')
 caminho_raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

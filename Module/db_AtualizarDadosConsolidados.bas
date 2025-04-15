@@ -42,8 +42,7 @@ Sub AtualizarDadosConsolidados()
     
     Call CriarIntervalosNomeadosB
     Unload frmAguarde
-    
-    Debug.Print "Tempo total de execuçao: " & Round(Timer - startTime, 2) & " segundos"
+    Debug.Print "Tempo total de execucao: " & Round(Timer - startTime, 2) & " segundos"
 End Sub
 
 Private Function CarregarConfiguracoes(ByRef jsonConfig As Object) As Boolean
@@ -76,7 +75,7 @@ Private Function CarregarConfiguracoes(ByRef jsonConfig As Object) As Boolean
         Exit Function
     End If
     
-    Debug.Print "Configuraçoes carregadas:"
+    Debug.Print "Configuracoes carregadas:"
     Debug.Print "Driver: " & jsonConfig("driver")
     Debug.Print "Server: " & jsonConfig("server")
     Debug.Print "Database: " & jsonConfig("database")
@@ -87,7 +86,7 @@ Private Function CarregarConfiguracoes(ByRef jsonConfig As Object) As Boolean
     Exit Function
     
 ErroHandler:
-    MsgBox "Erro ao carregar configuraçoes: " & Err.Description, vbCritical
+    MsgBox "Erro ao carregar configuracoes: " & Err.Description, vbCritical
     CarregarConfiguracoes = False
 End Function
 
@@ -134,16 +133,43 @@ Private Sub ExecutarAtualizacoes(conn As Object, ws As Worksheet)
     ' Segmento
     AtualizarColuna conn, ws, "SELECT seg_descricao, seg_codigo FROM tb_segmento", Array(44, 45)
     
-    ' Seção
+    ' Secao
     AtualizarColuna conn, ws, "SELECT CONCAT(sec_codigo, ' - ', sec_descricao), sec_descricao, sec_codigo FROM tb_secao", Array(1, 48, 18)
     
-    ' Espécie
+    ' Especie
     AtualizarColuna conn, ws, "SELECT CAST(esp_codigo AS VARCHAR) + ' - ' + LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))), " & _
                               "LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))), " & _
                               "CAST(esp_codigo AS VARCHAR) FROM tb_especie", Array(2, 49, 19)
     
     ' Marca
     AtualizarColuna conn, ws, "SELECT CONCAT(mar_codigo, ' - ', mar_descricao), mar_descricao, mar_codigo FROM tb_marca", Array(5, 46, 20)
+    
+    ' Usuario
+    AtualizarColuna conn, ws, "SELECT usu_codigo FROM tb_usuario WHERE usu_codigo <> 1 and usu_codigo <> 2", Array(21) ' Coluna U
+    
+    ' Unidade
+    AtualizarColuna conn, ws, "SELECT und_codigo FROM tb_unidade", Array(22) ' Coluna V
+    
+    ' Etiqueta
+    AtualizarColuna conn, ws, "SELECT etq_codigo FROM tb_etiqueta", Array(23) ' Coluna W
+    
+    ' Classificacao Fiscal
+    AtualizarColuna conn, ws, "SELECT MIN(clf_codigo) AS clf_codigo FROM tb_classificacao_fiscal WHERE clf_ativo = 1 GROUP BY clf_descricao ORDER BY clf_codigo ASC", Array(24) ' Coluna X
+    
+    ' Comprador Completo
+    AtualizarColuna conn, ws, "SELECT CONCAT(usu_codigo, ' - ', usu_nome) AS descricao_completa FROM tb_usuario WHERE set_codigo IS NULL and usu_codigo <> 1 and usu_codigo <> 2", Array(8) ' Coluna H
+    
+    ' Unidade Completa
+    AtualizarColuna conn, ws, "SELECT und_descricao from tb_unidade", Array(10) ' Coluna J
+    
+    ' Classificacao Completa
+    AtualizarColuna conn, ws, "SELECT CONCAT(MIN(clf_codigo_fiscal), ' - ', clf_descricao) AS descricao_completa FROM tb_classificacao_fiscal WHERE clf_ativo = 1 GROUP BY clf_descricao ORDER BY descricao_completa ASC", Array(11) ' Coluna K
+    
+    ' Etiqueta Completa
+    AtualizarColuna conn, ws, "SELECT CONCAT(etq_codigo, ' - ', etq_descricao) AS descricao_completa FROM tb_etiqueta", Array(16) ' Coluna P
+    
+    ' Referencia Descricao
+    AtualizarColuna conn, ws, "SELECT prd_referencia_fornec FROM tb_produto", Array(47) ' Coluna AU
 End Sub
 
 Private Sub AtualizarColuna(conn As Object, ws As Worksheet, query As String, colunas As Variant)

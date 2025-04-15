@@ -4,6 +4,7 @@ Dim cel As Range
 Dim rng As Range
 Dim valorAnterior As Variant
 Dim corFundoAnterior As Variant
+Dim ws As Worksheet
 
 Private Sub Worksheet_SelectionChange(ByVal Target As Range)
     If Not Intersect(Target, Me.Range("C7:D1007,G7:G1007")) Is Nothing Then
@@ -18,24 +19,24 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     On Error GoTo TratarErro
     Application.EnableEvents = False
 
-    If Not Me.Name = "Cadastro de Produtos" Then GoTo Finalizar
-    
-    Call VerificarSecaoEspecie.VerificarSecaoCompleta
-    Call VerificarSecaoEspecie.ValidarDescricoes
+    Dim intersecaoAteBB As Range
+    Set intersecaoAteBB = Intersect(Target, Me.Range("A7:BB1007"))
 
-    Dim CheckRange As Range
-    Dim FoundCell As Range
+    If Not intersecaoAteBB Is Nothing Then
+        Sheets("Cadastro de Produtos").Unprotect Password:="nexttsol"
+        Call VerificarSecaoEspecie.VerificarSecaoCompleta
+        Call VerificarSecaoEspecie.ValidarDescricoes
+        Call VerificarSecaoEspecie.ValidarEspecies
+        Sheets("Cadastro de Produtos").Protect Password:="nexttsol", UserInterfaceOnly:=True
+    End If
+
     Dim cel As Range
-    Dim rng As Range
-    Dim intervaloPreenchimento As Range
-    Dim celula As Range
-    Dim deveSalvar As Boolean
     Dim linha As Long
-
+    Dim deveSalvar As Boolean
     deveSalvar = False
 
-    If Not Intersect(Target, Me.Range("A7:BB1007")) Is Nothing Then
-        For Each cel In Target.Cells
+    If Not intersecaoAteBB Is Nothing Then
+        For Each cel In intersecaoAteBB.Cells
             linha = cel.Row
             If linha >= 7 And linha <= 1007 Then
                 If Trim(UCase(Me.Cells(linha, "BK").Value)) = "OK" Then
@@ -49,35 +50,43 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     If deveSalvar Then ThisWorkbook.Save
 
     If Not Intersect(Target, Me.Range("F7:F1007")) Is Nothing Then
-        If Target.Cells.Count > 1 Then
-            Dim c As Range, todasVazias As Boolean
-            todasVazias = True
-            For Each c In Target
-                If Trim(c.Value) <> "" Then
-                    todasVazias = False
-                    Exit For
+        Dim fCelula As Range
+        Dim wsDados As Worksheet
+        Dim FoundCell As Range
+        Dim CheckRange As Range
+
+        On Error Resume Next
+        Set wsDados = Nothing
+        On Error Resume Next
+
+        For Each ws In ThisWorkbook.Worksheets
+            If LCase(ws.Name) = LCase("Dados Consolidados") Then
+                Set wsDados = ws
+                Exit For
+            End If
+        Next ws
+        On Error GoTo TratarErro
+
+        Set CheckRange = wsDados.Range("AU1:AU1007")
+
+        For Each fCelula In Intersect(Target, Me.Range("F7:F1007"))
+            If Not IsEmpty(fCelula.Value) And Trim(fCelula.Value) <> "" Then
+                Dim searchValue As String
+                searchValue = Trim(fCelula.Value)
+                
+                On Error Resume Next
+                Set FoundCell = CheckRange.Find(What:=searchValue, _
+                                            LookIn:=xlValues, _
+                                            LookAt:=xlWhole, _
+                                            MatchCase:=False)
+                On Error GoTo TratarErro
+                
+                If Not FoundCell Is Nothing Then
+                    MsgBox "O valor '" & fCelula.Value & "' ja existe no banco de dados.", vbExclamation
+                    fCelula.ClearContents
                 End If
-            Next c
-            If todasVazias Then GoTo Finalizar
-        Else
-            If Trim(Target.Value) = "" Then GoTo Finalizar
-        End If
-
-        Set CheckRange = Worksheets("Dados Consolidados").Range("AU1:AU100700")
-        Set FoundCell = CheckRange.Find(Target.Value, LookIn:=xlValues)
-
-        If Not FoundCell Is Nothing Then
-            MsgBox "O valor digitado ja existe no banco de dados. Tente novamente.", vbExclamation
-            Target.ClearContents
-            GoTo Finalizar
-        End If
-    End If
-
-    If Not Intersect(Target, Me.Range("A7:A1007")) Is Nothing _
-        Or Not Intersect(Target, Me.Range("B7:B1007")) Is Nothing _
-        Or Not Intersect(Target, Me.Range("BC7:BC1007")) Is Nothing _
-        Or Not Intersect(Target, Me.Range("BD7:BD1007")) Is Nothing Then
-
+            End If
+        Next fCelula
     End If
 
 Finalizar:
@@ -85,10 +94,8 @@ Finalizar:
     Exit Sub
 
 TratarErro:
-    MsgBox "Erro durante a execuçao do evento de alteraçao: " & Err.Description, vbCritical
+    MsgBox "Erro na linha " & Erl & ": " & Err.Description & vbCrLf & _
+           "Objeto com problema: " & TypeName(Err.Source), vbCritical
     Resume Finalizar
+
 End Sub
-
-
-
-
