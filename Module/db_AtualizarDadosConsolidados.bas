@@ -170,6 +170,9 @@ Private Sub ExecutarAtualizacoes(conn As Object, ws As Worksheet)
     
     ' Referencia Descricao
     AtualizarColuna conn, ws, "SELECT prd_referencia_fornec FROM tb_produto", Array(47) ' Coluna AU
+    
+    ' SECAO-ESPECIE
+    AtualizarColuna conn, ws, "SELECT sec_codigo FROM tb_especie", Array(51) ' Coluna AY
 End Sub
 
 Private Sub AtualizarColuna(conn As Object, ws As Worksheet, query As String, colunas As Variant)
