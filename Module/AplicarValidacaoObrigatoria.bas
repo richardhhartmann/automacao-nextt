@@ -1,162 +1,218 @@
 Attribute VB_Name = "AplicarValidacaoObrigatoria"
 Sub AplicarValidacaoObrigatoria()
-    Dim ws As Worksheet
-    Dim wsDados As Worksheet
-    Dim wsPedido As Worksheet
-    Dim wsSegmento As Worksheet
-    Dim wsSecao As Worksheet
-    Dim wsEspecie As Worksheet
-    Dim ultimaColuna As Integer
-    Dim linhaObrigatorio As Integer
-    Dim linhaInicioValidacao As Integer
-    Dim linhaFimValidacao As Integer
-    Dim coluna As Integer
-    Dim intervalo As Range
-    Dim rngLista As Range
-    Dim intervaloNumerico As Range
+    Dim ws As Worksheet, wsDados As Worksheet, wsDadosPedido As Worksheet
+    Dim wsPedido As Worksheet, wsSecao As Worksheet, wsEspecie As Worksheet
+    Dim ultimaColuna As Integer, linhaObrigatorio As Integer
+    Dim linhaInicioValidacao As Integer, linhaFimValidacao As Integer
+    Dim coluna As Integer, col As Long
+    Dim intervalo As Range, colLetter As String
+    Dim lastRow As Long
+    Const SENHA As String = "nexttsol" ' Definindo a senha como constante
+    
+    ' Verificar se as planilhas existem antes de continuar
+    If Not WorksheetExists("Cadastro de Produtos") Then
+        MsgBox "Planilha 'Cadastro de Produtos' nao encontrada!", vbCritical
+        Exit Sub
+    End If
     
     Set ws = ThisWorkbook.Sheets("Cadastro de Produtos")
-    Set wsPedido = ThisWorkbook.Sheets("Cadastro de Pedidos")
-    Set wsSecao = ThisWorkbook.Sheets("Cadastro de Secao")
-    Set wsEspecie = ThisWorkbook.Sheets("Cadastro de Especie")
+    
+    ' Verificar se a planilha de dados existe
+    If Not WorksheetExists("Dados Consolidados") Then
+        MsgBox "Planilha 'Dados Consolidados' nao encontrada!", vbCritical
+        Exit Sub
+    End If
     Set wsDados = ThisWorkbook.Sheets("Dados Consolidados")
-
+    
+    ' ========= DESPROTEGER PLANILHAS =========
+    On Error Resume Next ' Caso alguma planilha nao esteja protegida
+    ws.Unprotect SENHA
+    wsDados.Unprotect SENHA
+    
+    ' Configuracoes iniciais
     ultimaColuna = 17
     linhaObrigatorio = 4
     linhaInicioValidacao = 7
     linhaFimValidacao = 1007
 
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    Application.EnableEvents = False
+    
+    ' ========= VALIDAcOES BaSICAS =========
     For coluna = 1 To ultimaColuna
         If ws.Cells(linhaObrigatorio, coluna).Value = "Obrigatorio" Then
             Set intervalo = ws.Range(ws.Cells(linhaInicioValidacao, coluna), ws.Cells(linhaFimValidacao, coluna))
             
-            On Error Resume Next
-            Dim tipoValidacao As Long
-            tipoValidacao = intervalo.Validation.Type
-            On Error GoTo 0
-            
-            If tipoValidacao = xlValidateList Then
-                GoTo Proximo
-            End If
-            
-            intervalo.Validation.Delete
+            ' Validacao simples de campo obrigatorio
             With intervalo.Validation
-                .Add Type:=xlValidateInputOnly
+                .Delete
+                .Add Type:=xlValidateCustom, AlertStyle:=xlValidAlertStop, _
+                     Formula1:="=LEN(TRIM(A1))>0"
                 .IgnoreBlank = False
-                .ShowInput = False
                 .ShowError = True
-                .ErrorTitle = "Erro de Validacao"
-                .ErrorMessage = "Por favor, insira um valor valido."
+                .errorTitle = "Campo Obrigatorio"
+                .errorMessage = "Este campo deve ser preenchido."
             End With
         End If
-        Dim intervaloLimite As Range
-    
-    Set intervaloLimite = ws.Range("C7:C1007,D7:D1007,F7:F1007,G7:G1007")
-    intervaloLimite.Validation.Delete
-    
-    With intervaloLimite.Validation
-        .Add Type:=xlValidateTextLength, AlertStyle:=xlValidAlertStop, Operator:=xlLessEqual, Formula1:="50"
-        .IgnoreBlank = True
-        .ShowInput = True
-        .ShowError = True
-        .ErrorTitle = "Erro de Validacao"
-        .ErrorMessage = "O texto inserido excede o tamanho maximo permitido para esta celula."
-    End With
-
-    Set EANLimite = ws.Range("Q7:Q1007")
-    EANLimite.Validation.Delete
-    
-    With EANLimite.Validation
-        .Add Type:=xlValidateCustom, _
-            AlertStyle:=xlValidAlertStop, _
-            Formula1:="=AND(ISNUMBER(--Q7),LEN(Q7)<=20,INT(--Q7)=--Q7)"
-        .IgnoreBlank = True
-        .ShowInput = True
-        .ShowError = True
-        .ErrorTitle = "Valor invalido"
-        .ErrorMessage = "Digite ate 20 digitos numericos, sem espaços ou simbolos."
-    End With
-
-    EANLimite.NumberFormat = "@"
-
-    Set intervaloNumerico = ws.Range("M7:M1007")
-    intervaloNumerico.Validation.Delete
-    
-    With intervaloNumerico.Validation
-        .Add Type:=xlValidateDecimal, _
-             AlertStyle:=xlValidAlertStop, _
-             Operator:=xlBetween, _
-             Formula1:="1", _
-             Formula2:="99999999"
-        .IgnoreBlank = True
-        .ShowInput = True
-        .ShowError = True
-        .ErrorTitle = "Valor invalido"
-        .ErrorMessage = "Insira um numero entre 1 e 99.999.999."
-    End With
-    
-    intervaloNumerico.NumberFormat = """R$"" #,##0.00"
-    
-    Set intervaloPercentual = ws.Range("N7:N1007, O7:O1007")
-    intervaloPercentual.Validation.Delete
-    With intervaloPercentual.Validation
-        .Add Type:=xlValidateDecimal, _
-             AlertStyle:=xlValidAlertStop, _
-             Operator:=xlBetween, _
-             Formula1:="0", _
-             Formula2:="100"
-        .IgnoreBlank = True
-        .ShowInput = True
-        .ShowError = True
-        .ErrorTitle = "Valor invalido"
-        .ErrorMessage = "Insira um numero entre 0 e 100."
-    End With
-    intervaloPercentual.NumberFormat = "0.00""%"""
-    
-    Set atributoLimite = ws.Range("R7:BB1007")
-    atributoLimite.Validation.Delete
-    
-    With atributoLimite.Validation
-        .Add Type:=xlValidateTextLength, AlertStyle:=xlValidAlertStop, Operator:=xlLessEqual, Formula1:="50"
-        .IgnoreBlank = True
-        .ShowInput = True
-        .ShowError = True
-        .ErrorTitle = "Erro de Validacao"
-        .ErrorMessage = "O texto inserido excede o tamanho maximo permitido para esta celula."
-    End With
-
-Proximo:
     Next coluna
 
-    AplicarListaSuspensa ws, wsDados, "A7:A1007", "A1:A100700"
-    AplicarListaSuspensa ws, wsDados, "E7:E1007", "E1:E100700"
-    AplicarListaSuspensa ws, wsDados, "H7:H1007", "H1:H100700"
-    AplicarListaSuspensa ws, wsDados, "J7:J1007", "J1:J100700"
-    AplicarListaSuspensa ws, wsDados, "K7:K1007", "K1:K100700"
-    AplicarListaSuspensa ws, wsDados, "L7:L1007", "L1:L100700"
-    AplicarListaSuspensa ws, wsDados, "P7:P1007", "P1:P100700"
+    ' ========= VALIDAcOES ESPECiFICAS =========
+    
+    ' Validacao de tamanho de texto
+    ApplySimpleValidation ws.Range("C7:C1007,D7:D1007,F7:F1007,G7:G1007"), _
+                         "=LEN(C7)<=50", _
+                         "Limite de Caracteres", _
+                         "Maximo de 50 caracteres permitidos."
+    
+    ' Validacao de EAN
+    ApplySimpleValidation ws.Range("Q7:Q1007"), _
+                         "=AND(ISNUMBER(--A1),LEN(A1)<=20,INT(--A1)=--A1)", _
+                         "EAN Invalido", _
+                         "Digite um numero inteiro com ate 20 digitos"
+    ws.Range("Q7:Q1007").NumberFormat = "@"
+    
+    ' Validacao numerica
+    ApplySimpleValidation ws.Range("M7:M1007"), _
+                         "=AND(ISNUMBER(M1),M1>=1,M1<=99999999)", _
+                         "Valor Invalido", _
+                         "Digite um valor entre 1 e 99.999.999"
+    ws.Range("M7:M1007").NumberFormat = """R$"" #,##0.00"
+    
+    ' Validacao percentual
+    ApplySimpleValidation ws.Range("N7:N1007,O7:O1007"), _
+                         "=AND(ISNUMBER(N1),N1>=0,N1<=100)", _
+                         "Valor Invalido", _
+                         "Digite um valor entre 0 e 100"
+    ws.Range("N7:N1007,O7:O1007").NumberFormat = "0.00""%"""
+    
+    ' Validacao de atributos
+    ApplySimpleValidation ws.Range("R7:Y1007"), _
+                         "=LEN(R7)<=50", _
+                         "Limite de Caracteres", _
+                         "Maximo de 50 caracteres permitidos."
+    
+    
+    ' ========= LISTAS SUSPENSAS =========
+    
+    ' Listas suspensas fixas (com tratamento de erro aprimorado)
+    ApplyDropdown ws, wsDados, "A7:A1007", "A1:A100"
+    ApplyDropdown ws, wsDados, "E7:E1007", "E1:E100"
+    ApplyDropdown ws, wsDados, "H7:H1007", "H1:H100"
+    ApplyDropdown ws, wsDados, "J7:J1007", "J1:J100"
+    ApplyDropdown ws, wsDados, "K7:K1007", "K1:K100"
+    ApplyDropdown ws, wsDados, "L7:L1007", "L1:L100"
+    ApplyDropdown ws, wsDados, "P7:P1007", "P1:P100"
+    
+    ' Listas suspensas dinâmicas (colunas Z a BB)
+    For col = Columns("Z").Column To Columns("BB").Column
+        If Not IsEmpty(ws.Cells(3, col).Value) Then
+            colLetter = Split(ws.Cells(1, col).Address(True, False), "$")(0)
+            
+            ' Encontra a ultima linha preenchida na coluna
+            lastRow = wsDados.Cells(wsDados.Rows.Count, col).End(xlUp).Row
 
-    AplicarListaSuspensa wsSecao, wsDados, "B7:B1007", "AR1:AR100700"
-    AplicarListaSuspensa wsEspecie, wsDados, "B7:B1007", "A1:A100700"
+            ' Aplica o dropdown ignorando o ultimo valor (da lista de origem)
+            ApplyDropdown ws, wsDados, colLetter & "7:" & colLetter & "1007", colLetter & "1:" & colLetter & lastRow - 1
+        End If
+    Next col
+    
+    ' ========= REPROTEGER PLANILHAS =========
+    On Error Resume Next ' Caso a protecao falhe por algum motivo
+    ws.Protect password:=SENHA, DrawingObjects:=True, Contents:=True, Scenarios:=True
+    wsDados.Protect password:=SENHA, DrawingObjects:=True, Contents:=True, Scenarios:=True
+    On Error GoTo 0
+    
+    ' Restaurar configuracoes do Excel
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    
+    Exit Sub
+    
+ErrorHandler:
+    ' Tentar reproteger as planilhas mesmo em caso de erro
+    On Error Resume Next
+    ws.Protect password:=SENHA
+    wsDados.Protect password:=SENHA
+    On Error GoTo 0
+    
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    MsgBox "Ocorreu um erro: " & Err.Description & vbCrLf & _
+           "Na linha: " & Erl, vbCritical
 
 End Sub
 
-Sub AplicarListaSuspensa(wsDestino As Worksheet, wsOrigem As Worksheet, destino As String, origem As String)
-    Dim intervaloDestino As Range
-    Dim intervaloOrigem As Range
+' ========= FUNcOES AUXILIARES =========
+Function WorksheetExists(sheetName As String) As Boolean
+    On Error Resume Next
+    WorksheetExists = (ThisWorkbook.Sheets(sheetName).Name <> "")
+    On Error GoTo 0
+End Function
 
-    Set intervaloDestino = wsDestino.Range(destino)
-    Set intervaloOrigem = wsOrigem.Range(origem)
-
-    intervaloDestino.Validation.Delete
-
-    With intervaloDestino.Validation
-        .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:= _
-        xlBetween, Formula1:="='" & wsOrigem.Name & "'!" & intervaloOrigem.Address
-        .IgnoreBlank = True
-        .ShowInput = True
-        .ShowError = True
-        .ErrorTitle = "Entrada Invalida"
-        .ErrorMessage = "Selecione um valor da lista."
+Sub ApplySimpleValidation(rng As Range, validationFormula As String, _
+                         errorTitle As String, errorMessage As String)
+    If rng Is Nothing Then Exit Sub
+    
+    On Error Resume Next
+    With rng.Validation
+        .Delete
+        .Add Type:=xlValidateCustom, AlertStyle:=xlValidAlertStop, _
+             Formula1:=validationFormula
+        If Err.Number = 0 Then
+            .IgnoreBlank = True
+            .ShowError = True
+            .errorTitle = errorTitle
+            .errorMessage = errorMessage
+        Else
+            Err.Clear
+        End If
     End With
+    On Error GoTo 0
 End Sub
+
+Sub ApplyDropdown(wsDestino As Worksheet, wsOrigem As Worksheet, _
+                 destino As String, origem As String)
+    Dim rngDest As Range, rngOrig As Range
+    Dim listFormula As String
+    
+    On Error Resume Next
+    Set rngDest = wsDestino.Range(destino)
+    Set rngOrig = wsOrigem.Range(origem)
+    
+    If rngDest Is Nothing Or rngOrig Is Nothing Then
+        Debug.Print "Intervalo invalido. Destino: " & destino & ", Origem: " & origem
+        Exit Sub
+    End If
+    
+    ' Verificar se o intervalo de origem tem dados
+    If WorksheetFunction.CountA(rngOrig) = 0 Then
+        Debug.Print "Intervalo de origem vazio: " & rngOrig.Address
+        Exit Sub
+    End If
+    
+    ' Criar formula da lista (versao simplificada)
+    listFormula = "=" & rngOrig.Address(External:=True)
+    
+    With rngDest.Validation
+        .Delete
+        .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:=listFormula
+        If Err.Number = 0 Then
+            .IgnoreBlank = True
+            .ShowError = True
+            .errorTitle = "Selecao Necessaria"
+            .errorMessage = "Por favor, selecione um valor da lista."
+        Else
+            Debug.Print "Erro ao criar lista em " & rngDest.Address & ": " & Err.Description
+            Err.Clear
+            
+            ' Fallback para lista simples
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, _
+                 Formula1:="Item1,Item2,Item3"
+        End If
+    End With
+    On Error GoTo 0
+End Sub
+

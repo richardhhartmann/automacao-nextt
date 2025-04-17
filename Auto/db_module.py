@@ -274,10 +274,6 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba, pasta_modulos):
                 excel.Application.Run("CriarIntervalosNomeadosB")
                 debug_print("Macro 'CriarIntervalosNomeadosB' executada com sucesso!")
 
-                debug_print("Executando a macro AplicarValidacaoObrigatoria...")
-                excel.Application.Run("AplicarValidacaoObrigatoria.AplicarValidacaoObrigatoria")
-                debug_print("Macro 'AplicarValidacaoObrigatoria' executada com sucesso!")
-
                 caminho_autoexec = os.path.join(pasta_modulos, "AutoExec.bas")
                 if os.path.exists(caminho_autoexec):
                     importar_autoexec_para_thisworkbook(wb, caminho_autoexec)

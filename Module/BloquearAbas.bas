@@ -5,7 +5,7 @@ Sub BloquearTodasAbas()
     Dim i As Integer
     Dim btn As Shape
     
-    abasParaBloquear = Array("Nextt", "Cadastro de Pedidos")
+    abasParaBloquear = Array("Nextt")
     
     For i = LBound(abasParaBloquear) To UBound(abasParaBloquear)
         On Error Resume Next

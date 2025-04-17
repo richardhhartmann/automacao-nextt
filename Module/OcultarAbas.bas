@@ -2,7 +2,7 @@ Attribute VB_Name = "OcultarAbasProtegidas"
 Public Sub OcultarAbasProtegidas()
     On Error Resume Next
     Dim abasParaOcultar As Variant
-    abasParaOcultar = Array("Cadastro de Segmento", "Cadastro de Secao", "Cadastro de Especie", "Dados Consolidados")
+    abasParaOcultar = Array("Cadastro de Segmento", "Cadastro de Secao", "Cadastro de Especie", "Dados Consolidados", "Dados Pedido")
     
     Dim ws As Worksheet
     Dim nomeAba As Variant

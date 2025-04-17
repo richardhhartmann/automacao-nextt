@@ -1,7 +1,7 @@
-Attribute VB_Name = "db_AtualizarDadosConsolidados"
+Attribute VB_Name = "db_AtualizarDadosPedido"
 Option Explicit
 
-Sub AtualizarDadosConsolidados()
+Sub AtualizarDadosPedido()
     Dim conn As Object
     Dim ws As Worksheet
     Dim connStr As String
@@ -25,9 +25,9 @@ Sub AtualizarDadosConsolidados()
         Exit Sub
     End If
     
-    Set ws = ThisWorkbook.Sheets("Dados Consolidados")
+    Set ws = ThisWorkbook.Sheets("Dados Pedido")
     If ws Is Nothing Then
-        MsgBox "Erro: planilha 'Dados Consolidados' nao encontrada.", vbCritical
+        MsgBox "Erro: planilha 'Dados Pedido' nao encontrada.", vbCritical
         conn.Close
         Unload frmAguarde
         Exit Sub
@@ -130,53 +130,11 @@ Private Sub LimparIntervalosPlanilha(ws As Worksheet)
 End Sub
 
 Private Sub ExecutarAtualizacoes(conn As Object, ws As Worksheet)
-    ' Segmento
-    AtualizarColuna conn, ws, "SELECT seg_descricao, seg_codigo FROM tb_segmento", Array(44, 45)
+    ' Fornecedor
+    AtualizarColuna conn, ws, "SELECT pju_razao_social FROM tb_pessoa_juridica WHERE pju_razao_social IS NOT NULL", Array(2)
 
-    ' Secao
-    AtualizarColuna conn, ws, "SELECT CAST(sec_codigo AS VARCHAR) + ' - ' + sec_descricao, sec_descricao, sec_codigo FROM tb_secao", Array(1, 48, 18)
-
-    ' Especie
-    AtualizarColuna conn, ws, "SELECT CAST(esp_codigo AS VARCHAR) + ' - ' + LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))), " & _
-                            "LTRIM(SUBSTRING(esp_descricao, PATINDEX('%[A-Z]%', esp_descricao), LEN(esp_descricao))), " & _
-                            "CAST(esp_codigo AS VARCHAR) FROM tb_especie", Array(2, 49, 19)
-
-    ' Marca
-    AtualizarColuna conn, ws, "SELECT CAST(mar_codigo AS VARCHAR) + ' - ' + mar_descricao, mar_descricao, mar_codigo FROM tb_marca", Array(5, 46, 20)
-
-    ' Usuario
-    AtualizarColuna conn, ws, "SELECT usu_codigo FROM tb_usuario WHERE usu_codigo <> 1 and usu_codigo <> 2", Array(21) ' Coluna U
-
-    ' Unidade
-    AtualizarColuna conn, ws, "SELECT und_codigo FROM tb_unidade", Array(22) ' Coluna V
-
-    ' Etiqueta
-    AtualizarColuna conn, ws, "SELECT etq_codigo FROM tb_etiqueta", Array(23) ' Coluna W
-
-    ' Classificacao Fiscal
-    AtualizarColuna conn, ws, "SELECT MIN(clf_codigo) AS clf_codigo FROM tb_classificacao_fiscal WHERE clf_ativo = 1 GROUP BY clf_descricao ORDER BY clf_codigo ASC", Array(24) ' Coluna X
-
-    ' Comprador Completo
-    AtualizarColuna conn, ws, "SELECT CAST(usu_codigo AS VARCHAR) + ' - ' + usu_nome AS descricao_completa FROM tb_usuario WHERE set_codigo IS NULL and usu_codigo <> 1 and usu_codigo <> 2", Array(8) ' Coluna H
-
-    ' Unidade Completa
-    AtualizarColuna conn, ws, "SELECT und_descricao from tb_unidade", Array(10) ' Coluna J
-
-    ' Classificacao Completa
-    AtualizarColuna conn, ws, "SELECT CAST(MIN(clf_codigo_fiscal) AS VARCHAR) + ' - ' + clf_descricao AS descricao_completa FROM tb_classificacao_fiscal WHERE clf_ativo = 1 GROUP BY clf_descricao ORDER BY descricao_completa ASC", Array(11) ' Coluna K
-
-    ' Etiqueta Completa
-    AtualizarColuna conn, ws, "SELECT CAST(etq_codigo AS VARCHAR) + ' - ' + etq_descricao AS descricao_completa FROM tb_etiqueta", Array(16) ' Coluna P
-
-    ' Referencia Descricao
-    AtualizarColuna conn, ws, "SELECT prd_referencia_fornec FROM tb_produto", Array(47) ' Coluna AU
-
-    ' SECAO-ESPECIE
-    AtualizarColuna conn, ws, "SELECT sec_codigo FROM tb_especie", Array(51) ' Coluna AY
-
-    ' Modelo Atributo
-    AtualizarModelosPorAtributo conn, ws
-
+    ' Comprador
+    AtualizarColuna conn, ws, "SELECT CAST(usu_codigo AS VARCHAR) + ' - ' + usu_nome AS descricao_completa FROM tb_usuario WHERE set_codigo IS NULL and usu_codigo <> 1 and usu_codigo <> 2", Array(3) 
 End Sub
 
 Private Sub AtualizarColuna(conn As Object, ws As Worksheet, query As String, colunas As Variant)
@@ -226,49 +184,3 @@ ErroHandler:
     MsgBox "Erro em AtualizarColuna: " & Err.Description, vbCritical
     Resume Finalizar
 End Sub
-
-Private Sub AtualizarModelosPorAtributo(conn As Object, ws As Worksheet)
-    Dim rs As Object
-    Dim tpaCodigos As Object
-    Dim codigo As Variant
-    Dim descricao As String
-    Dim linha As Long
-    Dim colunaAtual As Long
-    Dim tipoDado As String
-
-    Set rs = CreateObject("ADODB.Recordset")
-    Set tpaCodigos = CreateObject("Scripting.Dictionary")
-
-    ' Obtem todos os tpa_codigo + tipo de dado
-    rs.Open "SELECT tpa_codigo, tpa_descricao, tpa_tipo_dado FROM tb_tipo_atributo " & _
-            "WHERE tpa_codigo > 2 AND tba_codigo = 1 AND tpa_ordem = 0 " & _
-            "ORDER BY tpa_descricao", conn
-
-    Do Until rs.EOF
-        tpaCodigos.Add rs.Fields("tpa_codigo").Value, Array(rs.Fields("tpa_descricao").Value, rs.Fields("tpa_tipo_dado").Value)
-        rs.MoveNext
-    Loop
-    rs.Close
-
-    colunaAtual = 26 ' Coluna Z
-
-    For Each codigo In tpaCodigos.Keys
-        rs.Open "SELECT mat_descricao FROM tb_modelo_atributo " & _
-                "WHERE tpa_codigo = " & codigo & " " & _
-                "ORDER BY mat_descricao", conn
-
-        linha = 1
-        Do Until rs.EOF
-            ws.Cells(linha, colunaAtual).Value = rs.Fields("mat_descricao").Value
-            linha = linha + 1
-            rs.MoveNext
-        Loop
-        rs.Close
-
-        tipoDado = tpaCodigos(codigo)(1)
-        ws.Cells(linha, colunaAtual).Value = tipoDado ' Adiciona o tipo de dado na ultima linha
-
-        colunaAtual = colunaAtual + 1
-    Next codigo
-End Sub
-

@@ -263,21 +263,52 @@ def cadastrar_produto():
                 
                 for atributo in produto['atributos_adicionais']:
                     sec, esp, _, tpa, desc, _ = atributo
-                    try:
+
+                    cursor.execute("""
+                        SELECT COUNT(*) 
+                        FROM INFORMATION_SCHEMA.COLUMNS 
+                        WHERE TABLE_NAME = 'tb_atributo_produto' 
+                        AND COLUMN_NAME = 'prr_codigo'
+                    """)
+                    has_prr_codigo = cursor.fetchone()[0] > 0
+                    
+                    if has_prr_codigo:
+                        try:
+                            cursor.execute("""
+                                INSERT INTO tb_atributo_produto 
+                                (sec_codigo, esp_codigo, prd_codigo, tpa_codigo, apr_descricao, prr_codigo)
+                                VALUES (?, ?, ?, ?, ?, NULL)
+                            """, sec, esp, prd_codigo, tpa, desc)
+                        except pyodbc.IntegrityError:
+                            pass
+                    else:
                         cursor.execute("""
                             INSERT INTO tb_atributo_produto 
-                            (sec_codigo, esp_codigo, prd_codigo, tpa_codigo, apr_descricao, prr_codigo)
-                            VALUES (?, ?, ?, ?, ?, NULL)
-                        """, sec, esp, prd_codigo, tpa, desc)
-                    except pyodbc.IntegrityError:
-                        pass
+                            (sec_codigo, esp_codigo, prd_codigo, tpa_codigo, apr_descricao)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, (sec, esp, prd_codigo, tpa, desc))
                 
+                cursor.execute("""SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'tb_atributo_produto' 
+                    AND COLUMN_NAME = 'ipr_gtin'""")
+                
+                has_ipr_gtin = cursor.fetchone()[0] > 0
+
                 for variacao in produto['variacoes']:
-                    cursor.execute("""
-                        INSERT INTO tb_item_produto 
-                        (sec_codigo, esp_codigo, prd_codigo, ipr_codigo, ipr_codigo_barra, ipr_preco_promocional, ipr_gtin)
-                        VALUES (?, ?, ?, ?, ?, 0, NULL)
-                    """, produto['secao'], produto['especie'], prd_codigo, variacao['ipr_codigo'], variacao['ipr_codigo_barra'])
+                    if has_ipr_gtin:
+                        cursor.execute("""
+                            INSERT INTO tb_item_produto 
+                            (sec_codigo, esp_codigo, prd_codigo, ipr_codigo, ipr_codigo_barra, ipr_preco_promocional, ipr_gtin)
+                            VALUES (?, ?, ?, ?, ?, 0, NULL)
+                        """, produto['secao'], produto['especie'], prd_codigo, variacao['ipr_codigo'], variacao['ipr_codigo_barra'])
+                    else:
+                        cursor.execute("""
+                            INSERT INTO tb_item_produto 
+                            (sec_codigo, esp_codigo, prd_codigo, ipr_codigo, ipr_codigo_barra, ipr_preco_promocional)
+                            VALUES (?, ?, ?, ?, ?, 0)
+                        """, produto['secao'], produto['especie'], prd_codigo, variacao['ipr_codigo'], variacao['ipr_codigo_barra'])
+
                     
                     cursor.execute("""
                         INSERT INTO tb_atributo_item_produto 

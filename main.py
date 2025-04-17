@@ -5,7 +5,7 @@ import threading
 import sys
 import os
 import pyodbc
-from tkinter import font, Toplevel
+from tkinter import font, Toplevel, ttk
 from PIL import Image, ImageTk
 from Auto.db_connection import preencher_planilha
 from Auto.db_module import importar_modulo_vba
@@ -34,43 +34,55 @@ def validar_campos():
         return False
     return True
 
+sql_server_drivers = [d for d in pyodbc.drivers() if "SQL Server" in d]
+if sql_server_drivers:
+    driver_mais_recente = sql_server_drivers[-1]
+    print(f"Driver selecionado: {driver_mais_recente}")
+
 def exportar_conexao():
     """Exporta a conexão se os campos forem válidos."""
     if not validar_campos():
         return
     
     bloquear_campos(True)
-
     mostrar_janela_carregamento()
-    
-    driver = entry_driver.get().strip()
-    server = entry_server.get().strip()
-    database = entry_database.get().strip()
-    username = entry_username.get().strip()
-    password = entry_password.get().strip()
-    trusted_connection = "yes" if var_trusted_connection.get() else "no"
-    
+
+    global nome_empresa  # Adicione esta linha
+
+    # Coleta os dados da interface
     dados_conexao = {
-        "driver": driver,
-        "server": server,
-        "database": database,
-        "username": username,
-        "password": password,
-        "trusted_connection": trusted_connection
+        "driver": driver_mais_recente,
+        "server": entry_server.get().strip(),
+        "database": entry_database.get().strip(),
+        "username": entry_username.get().strip(),
+        "password": entry_password.get().strip(),
+        "trusted_connection": "yes" if var_trusted_connection.get() else "no"
     }
     
     try:
-        with open('conexao_temp.txt', 'w') as f:
+        # Salva os dados no arquivo
+        with open(caminho_parametros, 'w') as f:
             json.dump(dados_conexao, f, indent=4)
         
         print("\nConfiguração exportada com sucesso!")  
         label_status.config(text="Configuração salva com sucesso!", fg="green")
-        root.after(100, main)
+
+        nome_empresa = obter_nome_empresa()
+        threading.Thread(target=processar_apos_exportacao).start()
     
     except Exception as e:
         fechar_janela_carregamento()
         print(f"Erro ao salvar conexão: {e}") 
         label_status.config(text=f"Erro ao salvar: {str(e)}", fg="red")
+
+def processar_apos_exportacao():
+    """Função chamada após salvar os parâmetros para ler o arquivo e continuar o processamento."""
+    try:
+        main()
+    except Exception as e:
+        fechar_janela_carregamento()
+        label_status.config(text=f"Erro ao ler parâmetros: {str(e)}", fg="red")
+
 
 def carregar_parametros_conexao_arquivo():
     """Carrega os parâmetros de conexão do arquivo 'conexao_temp.txt'."""
@@ -107,10 +119,6 @@ def obter_nome_empresa():
     except Exception as e:
         print(f"Erro ao buscar o nome da empresa: {e}")
         return "Erro"
-
-nome_empresa = obter_nome_empresa()
-
-
 
 if not os.path.exists(pasta_modulos):
     print(f"Erro: A pasta '{pasta_modulos}' não foi encontrada!")
@@ -170,10 +178,15 @@ def mostrar_janela_carregamento():
 
 def atualizar_texto_carregamento():
     """Atualiza o texto da janela de carregamento com animação de pontinhos."""
+    global nome_empresa
     while animando:
-        label_loading.config(text="Extraindo Dados " + nome_empresa + "...")
+        try:
+            texto = f"Extraindo Dados {nome_empresa}..." if 'nome_empresa' in globals() else "Extraindo Dados..."
+            label_loading.config(text=texto)
+        except:
+            label_loading.config(text="Extraindo Dados...")
         time.sleep(0.5)
-        loading_window.after(0, loading_window.update) 
+        loading_window.after(0, loading_window.update)
 
 
 def fechar_janela_carregamento():
@@ -222,9 +235,94 @@ def importar():
     
     threading.Thread(target=executar_cadastro, daemon=True).start()
 
+def preencher_campos_com_parametros_salvos():
+    """Preenche os campos da interface com os últimos valores salvos no arquivo de conexão."""
+    if not os.path.exists(caminho_parametros):
+        return  # Se o arquivo não existir ainda, não faz nada
+
+    try:
+        with open(caminho_parametros, "r") as f:
+            dados = json.load(f)
+        
+        entry_driver.delete(0, tk.END)
+        entry_driver.insert(0, dados.get("driver", ""))
+
+        entry_server.delete(0, tk.END)
+        entry_server.insert(0, dados.get("server", ""))
+        atualizar_bancos_disponiveis()
+
+        entry_database.delete(0, tk.END)
+        entry_database.insert(0, dados.get("database", ""))
+
+        entry_username.delete(0, tk.END)
+        entry_username.insert(0, dados.get("username", ""))
+
+        entry_password.delete(0, tk.END)
+        entry_password.insert(0, dados.get("password", ""))
+
+        trusted = dados.get("trusted_connection", "").lower() == "yes"
+        var_trusted_connection.set(trusted)
+
+    except Exception as e:
+        print(f"Erro ao carregar dados salvos: {e}")
+
+import tkinter.messagebox as messagebox
+
+def atualizar_bancos_disponiveis(event=None):
+    servidor = entry_server.get().strip()
+    driver = entry_driver.get().strip()
+
+    if not servidor or not driver:
+        return
+
+    trusted = var_trusted_connection.get()
+    usuario = entry_username.get().strip()
+    senha = entry_password.get().strip()
+
+    try:
+        # Tenta conectar e buscar os bancos
+        string_conexao = f"DRIVER={driver};SERVER={servidor};"
+        if trusted:
+            string_conexao += "Trusted_Connection=yes;"
+        else:
+            string_conexao += f"UID={usuario};PWD={senha};"
+
+        conexao = pyodbc.connect(string_conexao, timeout=3)
+        cursor = conexao.cursor()
+        cursor.execute("""
+            SELECT name 
+            FROM sys.databases 
+            WHERE name NOT IN ('master', 'tempdb', 'model', 'msdb', 'Nextt.Compras')
+            AND state = 0  -- Somente bancos online
+            ORDER BY name
+        """)
+        bancos = [row[0] for row in cursor.fetchall()]
+        conexao.close()
+
+        if not bancos:
+            messagebox.showerror("Erro", "Nenhum banco de dados disponível para o servidor informado.")
+            entry_database['values'] = []
+            entry_database.set("Nenhum banco encontrado")
+            return
+
+        # Atualiza o menu suspenso com os bancos
+        entry_database['values'] = bancos
+        if bancos:
+            entry_database.current(0)  # Seleciona o primeiro banco, se disponível
+
+        # Atualiza a lista de bancos na entrada de banco de dados
+        entry_database['values'] = bancos
+        entry_database.set(bancos[0] if bancos else "Nenhum banco encontrado")
+
+    except Exception as e:
+        print(f"Erro ao buscar bancos: {e}")
+        entry_database['values'] = []
+        entry_database.set("Erro na conexão")
+
+
 root = tk.Tk()
 root.title("Conexão Banco de Dados")
-root.geometry("400x450")
+root.geometry("400x550")
 root.resizable(False, False)
 
 root.columnconfigure(0, weight=1)
@@ -250,28 +348,30 @@ label_text.grid(row=1, column=0, columnspan=2, pady=(0, 10), sticky="n")
 tk.Label(root, text="Driver:").grid(row=2, column=0, padx=10, pady=5, sticky="e")
 entry_driver = tk.Entry(root, width=30)
 entry_driver.grid(row=2, column=1, padx=10, pady=5, sticky="w")
-entry_driver.insert(0, "SQL Server Native Client 11.0")
+entry_driver.insert(0, f"{driver_mais_recente}")
 
 tk.Label(root, text="Servidor:").grid(row=3, column=0, padx=10, pady=5, sticky="e")
 entry_server = tk.Entry(root, width=30)
 entry_server.grid(row=3, column=1, padx=10, pady=5, sticky="w")
-entry_server.insert(0, "localhost")
+btn_refresh_bancos = tk.Button(root, text="Atualizar Bancos", command=atualizar_bancos_disponiveis)
+btn_refresh_bancos.grid(row=9, column=1, padx=(5, 10), pady=5, sticky="w")
 
 tk.Label(root, text="Banco de Dados:").grid(row=4, column=0, padx=10, pady=5, sticky="e")
-entry_database = tk.Entry(root, width=30)
+entry_database = ttk.Combobox(root, width=27, state="readonly")
 entry_database.grid(row=4, column=1, padx=10, pady=5, sticky="w")
-entry_database.insert(0, "NexttLoja")
+entry_database['values'] = ["(Selecione ou digite o servidor)"]
+entry_database.set("Selecione um banco")
 
 tk.Label(root, text="Usuário:").grid(row=5, column=0, padx=10, pady=5, sticky="e")
 entry_username = tk.Entry(root, width=30)
 entry_username.grid(row=5, column=1, padx=10, pady=5, sticky="w")
-entry_username.insert(0, "sa")
 
 tk.Label(root, text="Senha:").grid(row=6, column=0, padx=10, pady=5, sticky="e")
 entry_password = tk.Entry(root, width=30, show="*")
 entry_password.grid(row=6, column=1, padx=10, pady=5, sticky="w")
 
 var_trusted_connection = tk.BooleanVar(value=True)
+preencher_campos_com_parametros_salvos()
 checkbutton_trusted_connection = tk.Checkbutton(root, text="Certificado do Servidor Confiável", variable=var_trusted_connection)
 checkbutton_trusted_connection.grid(row=7, column=0, columnspan=2, pady=10)
 
@@ -285,6 +385,6 @@ btn_importar = tk.Button(frame_buttons, text="Importar Planilha", width=15, heig
 btn_importar.grid(row=0, column=1, padx=10)  
 
 label_status = tk.Label(root, text="", font=("Arial", 10))
-label_status.grid(row=9, column=0, columnspan=2, pady=(10, 0))
+label_status.grid(row=10, column=0, columnspan=2, pady=(10, 0))
 
 root.mainloop()

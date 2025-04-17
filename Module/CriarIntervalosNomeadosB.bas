@@ -11,7 +11,7 @@ Sub CriarIntervalosNomeadosB()
     On Error GoTo ErrorHandler
     
     If ws Is Nothing Then
-        MsgBox "Planilha 'Dados Consolidados' não encontrada!", vbExclamation
+        MsgBox "Planilha 'Dados Consolidados' nao encontrada!", vbExclamation
         Exit Sub
     End If
     

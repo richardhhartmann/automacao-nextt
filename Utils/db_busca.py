@@ -53,17 +53,27 @@ def search_in_database(search_term):
         SELECT TABLE_NAME, COLUMN_NAME
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_CATALOG = DB_NAME()
-        AND DATA_TYPE IN ('char', 'varchar', 'text', 'nchar', 'nvarchar', 'ntext')
+        AND DATA_TYPE IN ('char', 'varchar', 'nchar', 'nvarchar')
     """)
+
     tables_and_columns = cursor.fetchall()
 
     results = []
     for table, column in tables_and_columns:
-        query = f"SELECT '{table}' AS TableName, '{column}' AS ColumnName, [{column}] AS Value FROM [{table}] WHERE [{column}] LIKE ?"
-        cursor.execute(query, (f'%{search_term}%',))
-        rows = cursor.fetchall()
-        if rows:
-            results.extend(rows)
+        try:
+            query = f"SELECT DISTINCT '{table}' AS TableName, '{column}' AS ColumnName, CAST([{column}] AS NVARCHAR(MAX)) AS Value FROM [{table}] WHERE [{column}] LIKE ?"
+            cursor.execute(query, (f'%{search_term}%',))
+            rows = cursor.fetchall()
+            if rows:
+                results.extend(rows)
+        except pyodbc.ProgrammingError:
+            query = f"SELECT '{table}' AS TableName, '{column}' AS ColumnName, CAST([{column}] AS NVARCHAR(MAX)) AS Value FROM [{table}] WHERE [{column}] LIKE ?"
+            cursor.execute(query, (f'%{search_term}%',))
+            rows = cursor.fetchall()
+            if rows:
+                unique_rows = { (row.TableName, row.ColumnName, row.Value) for row in rows }
+                results.extend([ type('Row', (), {'TableName': t, 'ColumnName': c, 'Value': v}) 
+                               for t, c, v in unique_rows ])
 
     if results:
         print(f"Resultados encontrados para o termo '{search_term}':")

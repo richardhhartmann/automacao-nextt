@@ -6,7 +6,7 @@ Sub ReexibirAbas()
     Dim wsNextt As Worksheet
     Dim wsCadastroProdutos As Worksheet
     
-    abasParaReexibir = Array("Cadastro de Segmento", "Cadastro de Secao", "Cadastro de Especie", "Dados Consolidados")
+    abasParaReexibir = Array("Cadastro de Segmento", "Cadastro de Secao", "Cadastro de Especie", "Dados Consolidados", "Dados Pedido")
 
     frmSenha.Show
     

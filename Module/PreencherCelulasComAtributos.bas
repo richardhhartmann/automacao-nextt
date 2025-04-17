@@ -74,7 +74,7 @@ Sub PreencherCelulasComAtributos()
         Exit Sub
     End If
 
-    query = "SELECT tpa_descricao FROM tb_tipo_atributo WHERE tpa_codigo > 2 AND tpa_mascara IS NOT NULL;"
+    query = "SELECT tpa_descricao FROM tb_tipo_atributo WHERE tpa_codigo > 2 AND tba_codigo = 1 AND tpa_ordem = 0"
 
     Set rs = conn.Execute(query)
 
@@ -170,8 +170,6 @@ Sub PreencherCelulasComAtributos()
         Next i
         
         ws.Columns(colunaInicial).Resize(, qtdValores).ColumnWidth = 20
-    Else
-        MsgBox "Nenhum dado encontrado na consulta.", vbInformation
     End If
 
     rs.Close

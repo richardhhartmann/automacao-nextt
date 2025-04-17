@@ -54,6 +54,9 @@ try:
 
     df['sec_codigo'] = df['sec_codigo'].astype(int)
 
+    cursor.execute("SELECT DISTINCT tpa_codigo FROM tb_regra_atributo_especie")
+    tpa_codigos = [row[0] for row in cursor.fetchall()]
+
     for _, row in df.iterrows():
         descricao = str(row['descricao'])[:50] if pd.notna(row['descricao']) else "Descrição não informada"
         sec_codigo = int(row['sec_codigo'])
@@ -68,8 +71,6 @@ try:
             INSERT INTO tb_especie (sec_codigo, esp_codigo, esp_descricao, esp_granel, esp_aliquota_icms, esp_ativo, usu_codigo_comprador, clf_codigo)
             VALUES (?, ?, ?, 0, NULL, 1, NULL, NULL)
         """, sec_codigo, esp_codigo_incrementado, descricao)
-
-        tpa_codigos = [1, 2, 3, 4, 5]
 
         for tpa_codigo in tpa_codigos:
             cursor.execute("""

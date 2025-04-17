@@ -13,6 +13,7 @@ Private Sub Workbook_Open()
     With ws
         If Not .Range("O3").Value Like "Atualizado*" Then
             Call AtualizarDadosConsolidados
+            Call AtualizarDadosPedido
             Call GerarFormulaDinamica.GerarFormulaDinamica
             Call PreencherCelulasComAtributos.PreencherCelulasComAtributos
             Call BloquearTodasAbas.BloquearTodasAbas
@@ -20,6 +21,7 @@ Private Sub Workbook_Open()
             Call BloquearTodasAbas.BloquearCadastroMarcas
             Call OcultarAbasProtegidas.OcultarAbasProtegidas
             Call CriarShapeBotao.CriarShapeBotao
+            Call AplicarValidacaoObrigatoria.AplicarValidacaoObrigatoria
 
             Application.EnableEvents = False
             With ThisWorkbook.Sheets("Nextt").Range("O3")
