@@ -1,12 +1,12 @@
 Attribute VB_Name = "AplicarValidacaoObrigatoria"
 Sub AplicarValidacaoObrigatoria()
-    Dim ws As Worksheet, wsDados As Worksheet
+    Dim ws As Worksheet, wsDados As Worksheet, wsPedido As Worksheet, wsDadosPedido As Worksheet
     Dim ultimaColuna As Integer, linhaObrigatorio As Integer
     Dim linhaInicioValidacao As Integer, linhaFimValidacao As Integer
     Dim coluna As Integer, col As Long
     Dim intervalo As Range, colLetter As String
     Dim lastRow As Long
-    Const SENHA As String = "nexttsol" ' Definindo a senha como constante
+    Const senha As String = "nexttsol" ' Definindo a senha como constante
     
     ' Inicio do timer para debug
     Dim startTime As Double
@@ -27,10 +27,24 @@ Sub AplicarValidacaoObrigatoria()
     End If
     Set wsDados = ThisWorkbook.Sheets("Dados Consolidados")
     
+    ' Verificar se a planilha de dados de pedido existe
+    If Not WorksheetExists("Dados Pedido") Then
+        MsgBox "Planilha 'Dados Pedido' nao encontrada!", vbCritical
+        Exit Sub
+    End If
+    Set wsDadosPedido = ThisWorkbook.Sheets("Dados Pedido")
+    
+    ' Verificar se a planilha de pedidos existe
+    If Not WorksheetExists("Cadastro de Pedidos") Then
+        MsgBox "Planilha 'Cadastro de Pedidos' nao encontrada!", vbCritical
+        Exit Sub
+    End If
+    Set wsPedido = ThisWorkbook.Sheets("Cadastro de Pedidos")
+    
     ' ========= DESPROTEGER PLANILHAS =========
     On Error Resume Next ' Caso alguma planilha nao esteja protegida
-    ws.Unprotect SENHA
-    wsDados.Unprotect SENHA
+    ws.Unprotect senha
+    wsDados.Unprotect senha
     On Error GoTo ErrorHandler
     
     ' Configuracoes iniciais
@@ -43,7 +57,7 @@ Sub AplicarValidacaoObrigatoria()
     Application.Calculation = xlCalculationManual
     Application.EnableEvents = False
     
-    ' ========= VALIDACÕES BASICAS =========
+    ' ========= VALIDACÃ•ES BASICAS =========
     For coluna = 1 To ultimaColuna
         If ws.Cells(linhaObrigatorio, coluna).Value = "Obrigatorio" Then
             Set intervalo = ws.Range(ws.Cells(linhaInicioValidacao, coluna), ws.Cells(linhaFimValidacao, coluna))
@@ -55,13 +69,13 @@ Sub AplicarValidacaoObrigatoria()
                      Formula1:="=LEN(TRIM(A1))>0"
                 .IgnoreBlank = False
                 .ShowError = True
-                .ErrorTitle = "Campo Obrigatorio"
+                .errorTitle = "Campo Obrigatorio"
                 .ErrorMessage = "Este campo deve ser preenchido."
             End With
         End If
     Next coluna
 
-    ' ========= VALIDACÕES ESPECIFICAS =========
+    ' ========= VALIDACÃ•ES ESPECIFICAS =========
     
     ' Validacao de tamanho de texto
     ApplySimpleValidation ws.Range("C7:C1007,D7:D1007,F7:F1007,G7:G1007"), _
@@ -100,15 +114,18 @@ Sub AplicarValidacaoObrigatoria()
     ' ========= LISTAS SUSPENSAS =========
     
     ' Listas suspensas fixas (com tratamento de erro aprimorado)
-    ApplyDropdown ws, wsDados, "A7:A1007", "A1:A100"
-    ApplyDropdown ws, wsDados, "E7:E1007", "E1:E100"
-    ApplyDropdown ws, wsDados, "H7:H1007", "H1:H100"
-    ApplyDropdown ws, wsDados, "J7:J1007", "J1:J100"
-    ApplyDropdown ws, wsDados, "K7:K1007", "K1:K100"
-    ApplyDropdown ws, wsDados, "L7:L1007", "L1:L100"
-    ApplyDropdown ws, wsDados, "P7:P1007", "P1:P100"
+    ApplyDropdown ws, wsDados, "A7:A1007", "A1:A100700"
+    ApplyDropdown ws, wsDados, "E7:E1007", "E1:E100700"
+    ApplyDropdown ws, wsDados, "H7:H1007", "H1:H100700"
+    ApplyDropdown ws, wsDados, "J7:J1007", "J1:J100700"
+    ApplyDropdown ws, wsDados, "K7:K1007", "K1:K100700"
+    ApplyDropdown ws, wsDados, "L7:L1007", "L1:L100700"
+    ApplyDropdown ws, wsDados, "P7:P1007", "P1:P100700"
     
-    ' Listas suspensas dinâmicas (colunas Z a BB)
+    ApplyDropdown wsPedido, wsDadosPedido, "B7:B1007", "B1:B100700"
+    ApplyDropdown wsPedido, wsDadosPedido, "C7:C1007", "C1:C100700"
+    
+    ' Listas suspensas dinÃ¢micas (colunas Z a BB)
     For col = Columns("Z").Column To Columns("BB").Column
         colLetter = Split(ws.Cells(1, col).Address(True, False), "$")(0)
         
@@ -132,7 +149,7 @@ Sub AplicarValidacaoObrigatoria()
     
     ' ========= REPROTEGER PLANILHAS =========
     On Error Resume Next ' Caso a protecao falhe por algum motivo
-    ws.Protect Password:=SENHA, DrawingObjects:=True, Contents:=True, Scenarios:=True
+    ws.Protect password:=senha, DrawingObjects:=True, Contents:=True, Scenarios:=True
     On Error GoTo 0
     
     ' Restaurar configuracoes do Excel
@@ -145,7 +162,7 @@ Sub AplicarValidacaoObrigatoria()
 ErrorHandler:
     ' Tentar reproteger as planilhas mesmo em caso de erro
     On Error Resume Next
-    ws.Protect Password:=SENHA
+    ws.Protect password:=senha
     On Error GoTo 0
     
     Application.Calculation = xlCalculationAutomatic
@@ -156,7 +173,7 @@ ErrorHandler:
            "Na linha: " & Erl, vbCritical
 End Sub
 
-' ========= FUNCÕES AUXILIARES =========
+' ========= FUNCÃ•ES AUXILIARES =========
 Function WorksheetExists(sheetName As String) As Boolean
     On Error Resume Next
     WorksheetExists = (ThisWorkbook.Sheets(sheetName).Name <> "")
@@ -164,7 +181,7 @@ Function WorksheetExists(sheetName As String) As Boolean
 End Function
 
 Sub ApplySimpleValidation(rng As Range, validationFormula As String, _
-                         errorTitle As String, errorMessage As String)
+                         errorTitle As String, ErrorMessage As String)
     If rng Is Nothing Then Exit Sub
     
     On Error Resume Next
@@ -175,8 +192,8 @@ Sub ApplySimpleValidation(rng As Range, validationFormula As String, _
         If Err.Number = 0 Then
             .IgnoreBlank = True
             .ShowError = True
-            .ErrorTitle = errorTitle
-            .ErrorMessage = errorMessage
+            .errorTitle = errorTitle
+            .ErrorMessage = ErrorMessage
         Else
             Err.Clear
         End If
@@ -213,7 +230,7 @@ Sub ApplyDropdown(wsDestino As Worksheet, wsOrigem As Worksheet, _
         If Err.Number = 0 Then
             .IgnoreBlank = True
             .ShowError = True
-            .ErrorTitle = "Selecao Necessaria"
+            .errorTitle = "Selecao Necessaria"
             .ErrorMessage = "Por favor, selecione um valor da lista."
             Debug.Print "  Dropdown aplicado com sucesso em " & rngDest.Address
         Else
