@@ -5,7 +5,7 @@ Private Sub Workbook_Open()
     Dim shp As Shape
     
     Set ws = ThisWorkbook.Sheets("Nextt")
-    imageFolder = ThisWorkbook.Path & "\"
+    imageFolder = ThisWorkbook.Path & "\Public\"
     brandPath = imageFolder & "brand.png"
     uploadPath = imageFolder & "upload.png"
     refreshPath = imageFolder & "refresh.png"

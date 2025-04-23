@@ -1,13 +1,16 @@
 Attribute VB_Name = "AplicarValidacaoObrigatoria"
 Sub AplicarValidacaoObrigatoria()
-    Dim ws As Worksheet, wsDados As Worksheet, wsDadosPedido As Worksheet
-    Dim wsPedido As Worksheet, wsSecao As Worksheet, wsEspecie As Worksheet
+    Dim ws As Worksheet, wsDados As Worksheet
     Dim ultimaColuna As Integer, linhaObrigatorio As Integer
     Dim linhaInicioValidacao As Integer, linhaFimValidacao As Integer
     Dim coluna As Integer, col As Long
     Dim intervalo As Range, colLetter As String
     Dim lastRow As Long
     Const SENHA As String = "nexttsol" ' Definindo a senha como constante
+    
+    ' Inicio do timer para debug
+    Dim startTime As Double
+    startTime = Timer
     
     ' Verificar se as planilhas existem antes de continuar
     If Not WorksheetExists("Cadastro de Produtos") Then
@@ -28,6 +31,7 @@ Sub AplicarValidacaoObrigatoria()
     On Error Resume Next ' Caso alguma planilha nao esteja protegida
     ws.Unprotect SENHA
     wsDados.Unprotect SENHA
+    On Error GoTo ErrorHandler
     
     ' Configuracoes iniciais
     ultimaColuna = 17
@@ -39,7 +43,7 @@ Sub AplicarValidacaoObrigatoria()
     Application.Calculation = xlCalculationManual
     Application.EnableEvents = False
     
-    ' ========= VALIDAcOES BaSICAS =========
+    ' ========= VALIDACÕES BASICAS =========
     For coluna = 1 To ultimaColuna
         If ws.Cells(linhaObrigatorio, coluna).Value = "Obrigatorio" Then
             Set intervalo = ws.Range(ws.Cells(linhaInicioValidacao, coluna), ws.Cells(linhaFimValidacao, coluna))
@@ -51,13 +55,13 @@ Sub AplicarValidacaoObrigatoria()
                      Formula1:="=LEN(TRIM(A1))>0"
                 .IgnoreBlank = False
                 .ShowError = True
-                .errorTitle = "Campo Obrigatorio"
-                .errorMessage = "Este campo deve ser preenchido."
+                .ErrorTitle = "Campo Obrigatorio"
+                .ErrorMessage = "Este campo deve ser preenchido."
             End With
         End If
     Next coluna
 
-    ' ========= VALIDAcOES ESPECiFICAS =========
+    ' ========= VALIDACÕES ESPECIFICAS =========
     
     ' Validacao de tamanho de texto
     ApplySimpleValidation ws.Range("C7:C1007,D7:D1007,F7:F1007,G7:G1007"), _
@@ -106,21 +110,29 @@ Sub AplicarValidacaoObrigatoria()
     
     ' Listas suspensas dinâmicas (colunas Z a BB)
     For col = Columns("Z").Column To Columns("BB").Column
+        colLetter = Split(ws.Cells(1, col).Address(True, False), "$")(0)
+        
+        ' Verifica se a coluna deve ter dropdown (cabecalho nao vazio)
         If Not IsEmpty(ws.Cells(3, col).Value) Then
-            colLetter = Split(ws.Cells(1, col).Address(True, False), "$")(0)
-            
-            ' Encontra a ultima linha preenchida na coluna
+            ' Encontra a ultima linha preenchida na coluna de dados
             lastRow = wsDados.Cells(wsDados.Rows.Count, col).End(xlUp).Row
-
-            ' Aplica o dropdown ignorando o ultimo valor (da lista de origem)
-            ApplyDropdown ws, wsDados, colLetter & "7:" & colLetter & "1007", colLetter & "1:" & colLetter & lastRow - 1
+            
+            ' Verifica se ha dados suficientes para criar dropdown
+            If lastRow > 2 Then
+                Dim dropdownRange As String
+                dropdownRange = colLetter & "1:" & colLetter & (lastRow - 2)
+                
+                ' Aplica o dropdown apenas se houver dados
+                If WorksheetFunction.CountA(wsDados.Range(dropdownRange)) > 0 Then
+                    ApplyDropdown ws, wsDados, colLetter & "7:" & colLetter & "1007", dropdownRange
+                End If
+            End If
         End If
     Next col
     
     ' ========= REPROTEGER PLANILHAS =========
     On Error Resume Next ' Caso a protecao falhe por algum motivo
-    ws.Protect password:=SENHA, DrawingObjects:=True, Contents:=True, Scenarios:=True
-    wsDados.Protect password:=SENHA, DrawingObjects:=True, Contents:=True, Scenarios:=True
+    ws.Protect Password:=SENHA, DrawingObjects:=True, Contents:=True, Scenarios:=True
     On Error GoTo 0
     
     ' Restaurar configuracoes do Excel
@@ -133,19 +145,18 @@ Sub AplicarValidacaoObrigatoria()
 ErrorHandler:
     ' Tentar reproteger as planilhas mesmo em caso de erro
     On Error Resume Next
-    ws.Protect password:=SENHA
-    wsDados.Protect password:=SENHA
+    ws.Protect Password:=SENHA
     On Error GoTo 0
     
     Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
     Application.EnableEvents = True
+    
     MsgBox "Ocorreu um erro: " & Err.Description & vbCrLf & _
            "Na linha: " & Erl, vbCritical
-
 End Sub
 
-' ========= FUNcOES AUXILIARES =========
+' ========= FUNCÕES AUXILIARES =========
 Function WorksheetExists(sheetName As String) As Boolean
     On Error Resume Next
     WorksheetExists = (ThisWorkbook.Sheets(sheetName).Name <> "")
@@ -164,8 +175,8 @@ Sub ApplySimpleValidation(rng As Range, validationFormula As String, _
         If Err.Number = 0 Then
             .IgnoreBlank = True
             .ShowError = True
-            .errorTitle = errorTitle
-            .errorMessage = errorMessage
+            .ErrorTitle = errorTitle
+            .ErrorMessage = errorMessage
         Else
             Err.Clear
         End If
@@ -202,17 +213,13 @@ Sub ApplyDropdown(wsDestino As Worksheet, wsOrigem As Worksheet, _
         If Err.Number = 0 Then
             .IgnoreBlank = True
             .ShowError = True
-            .errorTitle = "Selecao Necessaria"
-            .errorMessage = "Por favor, selecione um valor da lista."
+            .ErrorTitle = "Selecao Necessaria"
+            .ErrorMessage = "Por favor, selecione um valor da lista."
+            Debug.Print "  Dropdown aplicado com sucesso em " & rngDest.Address
         Else
-            Debug.Print "Erro ao criar lista em " & rngDest.Address & ": " & Err.Description
+            Debug.Print "  ERRO ao criar lista em " & rngDest.Address & ": " & Err.Description
             Err.Clear
-            
-            ' Fallback para lista simples
-            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, _
-                 Formula1:="Item1,Item2,Item3"
         End If
     End With
     On Error GoTo 0
 End Sub
-

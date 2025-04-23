@@ -22,39 +22,6 @@ def mostrar_barra_progresso(total, descricao):
     """Exibe uma barra de progresso no console."""
     return tqdm(total=total, desc=descricao, unit="step", file=sys.stdout, dynamic_ncols=True)
 
-def adicionar_imagens(caminho_arquivo):
-    """Adiciona as imagens nas células B2 e G10 da aba 'Nextt'."""
-    try:
-        debug_print(f"Iniciando adição de imagens ao arquivo: {caminho_arquivo}")
-        
-        with mostrar_barra_progresso(5, "Adicionando imagens") as progresso:
-            wb = openpyxl.load_workbook(caminho_arquivo)
-            progresso.update(1)
-            
-            aba = wb['Nextt']
-            progresso.update(1)
-            
-            caminho_imagem_brand = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'brand.png')
-            caminho_imagem_upload = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'upload.png')
-            
-            if not all(os.path.exists(img) for img in [caminho_imagem_brand, caminho_imagem_upload]):
-                print("Erro: Um ou ambos os arquivos de imagem não foram encontrados.")
-                return
-            progresso.update(1)
-            
-            img_brand = Image(caminho_imagem_brand)
-            img_upload = Image(caminho_imagem_upload)
-            aba.add_image(img_brand, 'B2')
-            aba.add_image(img_upload, 'G10')
-            progresso.update(1)
-            
-            wb.save(caminho_arquivo)
-            progresso.update(1)
-            
-        print("Imagens inseridas com sucesso!")
-    except Exception as e:
-        print(f"Erro ao adicionar as imagens: {e}")
-
 def carregar_parametros_conexao_arquivo():
     """Carrega os parâmetros de conexão do arquivo 'conexao_temp.txt'."""
     debug_print("Carregando parâmetros de conexão do arquivo...")

@@ -67,19 +67,42 @@ def preencher_planilha(caminho_arquivo):
 
     # Identificar colunas obrigatórias
     print("Identificando colunas obrigatórias...")
+
+    # Estabelece a conexão com o banco de dados
     connection = get_connection_from_file('conexao_temp.txt')
     cursor = connection.cursor()
 
+    # Executa a consulta para identificar as colunas obrigatórias na tabela 'tb_produto'
     cursor.execute("""
         SELECT COLUMN_NAME 
         FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_NAME = 'tb_produto' 
         AND IS_NULLABLE = 'NO'
     """)
-
     colunas_obrigatorias = {row.COLUMN_NAME for row in cursor.fetchall()}
-    colunas_obrigatorias.update(["und_codigo", "clf_codigo", "prd_origem"]) 
+    colunas_obrigatorias.update(["und_codigo", "clf_codigo", "prd_origem"])
 
+    # Executa a consulta para verificar a presença da coluna 'apr_descricao' na tabela 'tb_atributo_produto'
+    cursor.execute("""
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = 'tb_atributo_produto' 
+        AND IS_NULLABLE = 'NO'
+    """)
+    colunas_tb_atributo_produto = {row.COLUMN_NAME for row in cursor.fetchall()}
+
+    # Verifica se a coluna 'apr_descricao' está entre as colunas obrigatórias da tabela 'tb_atributo_produto'
+    aba_planilha = wb["Cadastro de Produtos"]
+    linha_titulo = 3
+    linha_obrigatorio = 4
+    ultima_coluna = 17
+
+    # Se 'apr_descricao' estiver nas colunas obrigatórias, marca a célula da coluna Z com "Obrigatorio"
+    if 'apr_descricao' in colunas_tb_atributo_produto:
+        # Marca a célula na coluna Z (coluna 26) e linha 4 com "Obrigatorio"
+        aba_planilha.cell(row=linha_obrigatorio, column=26, value="Obrigatorio")
+
+    # Processa as colunas obrigatórias da planilha, conforme já feito anteriormente
     mapeamento_colunas = {
         "sec_codigo": "Seção",
         "esp_codigo": "Espécie",
@@ -98,20 +121,16 @@ def preencher_planilha(caminho_arquivo):
         "etq_codigo_padrao": "Etiqueta Padrão"
     }
 
-    aba_planilha = wb["Cadastro de Produtos"]
-    linha_titulo = 3
-    linha_obrigatorio = 4
-    ultima_coluna = 17
-
+    # Marca as células obrigatórias da planilha de acordo com o mapeamento
     for col in range(1, ultima_coluna + 1):
         nome_coluna_excel = aba_planilha.cell(row=linha_titulo, column=col).value
-
         if nome_coluna_excel is None:
             nome_coluna_excel = aba_planilha.cell(row=linha_titulo, column=col - 1).value  
 
         for col_sql, col_excel in mapeamento_colunas.items():
             if nome_coluna_excel == col_excel and col_sql in colunas_obrigatorias:
                 aba_planilha.cell(row=linha_obrigatorio, column=col, value="Obrigatorio")
+
 
     # Atualizar validação de dados para espécies
     print("Atualizando validação de dados para espécies...")

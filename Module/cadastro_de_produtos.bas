@@ -7,11 +7,9 @@ Dim corFundoAnterior As Variant
 Dim ws As Worksheet
 
 Private Sub Worksheet_SelectionChange(ByVal Target As Range)
-    If Not Intersect(Target, Me.Range("C7:D1007,G7:G1007")) Is Nothing Then
-        If Target.Cells.Count = 1 Then
-            valorAnterior = Target.Value
-            corFundoAnterior = Target.Interior.Color
-        End If
+    If Not Intersect(Target, Me.Range("C7:D1007,G7:G1007")) Is Nothing And Target.Cells.Count = 1 Then
+        valorAnterior = Target.Value
+        corFundoAnterior = Target.Interior.Color
     End If
 End Sub
 
@@ -19,45 +17,63 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     On Error GoTo TratarErro
     Application.EnableEvents = False
     Application.ScreenUpdating = False
-
-    ' --- Copiar C para D ---
-    Dim cRange As Range
-    Set cRange = Intersect(Target, Me.Range("C7:C1007"))
+    Application.Calculation = xlCalculationManual
     
+    Dim cRange As Range, fRange As Range, bcRange As Range, bRange As Range
+    Dim intersecaoAteBB As Range
+    Dim deveSalvar As Boolean
+    Dim wsDados As Worksheet
+    
+    Set cRange = Intersect(Target, Me.Range("C7:C1007"))
+    Set fRange = Intersect(Target, Me.Range("F8:F1007"))
+    Set bcRange = Intersect(Target, Me.Range("BC7:BC1007"))
+    Set bRange = Intersect(Target, Me.Range("A7:A1007"))
+    Set intersecaoAteBB = Intersect(Target, Me.Range("A7:BB1007"))
+    
+    If Not Intersect(Target, Me.Range("B7:B1007")) Is Nothing Then
+        If Target.Cells.Count = 1 Then
+            Application.EnableEvents = False
+            Call AtualizarSecaoEspecie(Target.Row)
+            Application.EnableEvents = True
+        End If
+    End If
+    
+    ' --- Codigo existente para copiar C para D ---
     If Not cRange Is Nothing Then
-        Dim cCell As Range
+        Dim cCell As Range, arrValues() As Variant
+        Dim i As Long, lastRow As Long
+        
+        lastRow = cRange.Rows.Count
+        ReDim arrValues(1 To lastRow, 1 To 1)
+        
+        i = 1
         For Each cCell In cRange
             If Not IsEmpty(cCell.Value) Then
-                Me.Cells(cCell.Row, "D").Value = cCell.Value
+                arrValues(i, 1) = cCell.Value
             End If
+            i = i + 1
         Next cCell
-    End If
-
-    ' --- Duplicar dados se F preenchido ---
-    Dim fRange As Range
-    Set fRange = Intersect(Target, Me.Range("F8:F1007"))
-
-    If Not fRange Is Nothing Then
-        Dim fCell As Range
-        Dim hasNewValues As Boolean
-        hasNewValues = False
         
-        For Each fCell In fRange
-            If Not IsEmpty(fCell.Value) Then
-                hasNewValues = True
-                Exit For
-            End If
-        Next fCell
+        Me.Range("D" & cRange.Row & ":D" & cRange.Row + lastRow - 1).Value = arrValues
+    End If
+    
+    ' --- Codigo existente para duplicar valores ---
+    If Not fRange Is Nothing Then
+        Dim fCell As Range, hasNewValues As Boolean
+        Dim resposta As VbMsgBoxResult, previousRow As Long
+        
+        hasNewValues = (Application.CountIf(fRange, "<>") > 0)
         
         If hasNewValues Then
-            Dim resposta As VbMsgBoxResult
-            Dim previousRow As Long
-            
             resposta = MsgBox("Deseja duplicar os valores da linha anterior?", vbQuestion + vbYesNo, "Duplicar Valores")
             
             If resposta = vbYes Then
                 frmAguarde.Show
                 DoEvents
+                
+                On Error Resume Next
+                Me.Unprotect "nexttsol"
+                On Error GoTo 0
                 
                 For Each fCell In fRange
                     If Not IsEmpty(fCell.Value) Then
@@ -65,142 +81,120 @@ Private Sub Worksheet_Change(ByVal Target As Range)
                         
                         If WorksheetFunction.CountA(Me.Range("A" & previousRow & ":E" & previousRow & ",G" & previousRow & ":BA" & previousRow)) = 0 Then
                             frmAguarde.Hide
-                            MsgBox "A linha " & previousRow & " não contém dados para duplicação.", vbExclamation, "Aviso"
+                            MsgBox "A linha " & previousRow & " nao contem dados para duplicacao.", vbExclamation, "Aviso"
                             GoTo Continuar
                         End If
                         
-                        Me.Range("A" & previousRow & ":E" & previousRow).Copy Destination:=Me.Range("A" & fCell.Row & ":E" & fCell.Row)
-                        Me.Range("G" & previousRow & ":BA" & previousRow).Copy Destination:=Me.Range("G" & fCell.Row & ":BA" & fCell.Row)
+                        With Me
+                            .Range("A" & fCell.Row & ":E" & fCell.Row).Value = .Range("A" & previousRow & ":E" & previousRow).Value
+                            .Range("G" & fCell.Row & ":BA" & fCell.Row).Value = .Range("G" & previousRow & ":BA" & previousRow).Value
+                            .Range("M" & fCell.Row & ":O" & fCell.Row).Value = .Range("M" & previousRow & ":O" & previousRow).Value
+                        End With
                     End If
                 Next fCell
+                
+                On Error Resume Next
+                Me.Protect password:="nexttsol", DrawingObjects:=True, Contents:=True, Scenarios:=True
+                On Error GoTo 0
+                
                 frmAguarde.Hide
             End If
         End If
     End If
 
 Continuar:
-    ' --- Validação dinâmica na coluna B ao alterar BC ---
-    Dim bcRange As Range
-    Set bcRange = Intersect(Target, Me.Range("BC7:BC1007"))
-    
-    If Not bcRange Is Nothing Then
+    ' --- Codigo existente para validacao dinâmica ---
+    If Not bcRange Is Nothing Or Not bRange Is Nothing Then
         On Error Resume Next
         Me.Unprotect "nexttsol"
         On Error GoTo 0
         
-        Dim bcCell As Range
-        For Each bcCell In bcRange
-            If Not IsEmpty(bcCell.Value) Then
-                AplicarValidacaoDinamica Me, bcCell.Row
-            Else
-                Me.Range("B" & bcCell.Row).Validation.Delete
-            End If
-        Next bcCell
+        Dim valRange As Range
+        If Not bcRange Is Nothing And Not bRange Is Nothing Then
+            Set valRange = Union(bcRange, bRange)
+        ElseIf Not bcRange Is Nothing Then
+            Set valRange = bcRange
+        ElseIf Not bRange Is Nothing Then
+            Set valRange = bRange
+        End If
+        
+        If Not valRange Is Nothing Then
+            Dim valCell As Range
+            For Each valCell In valRange
+                If Not IsEmpty(valCell.Value) Then
+                    AplicarValidacaoDinamica Me, valCell.Row
+                ElseIf Not bcRange Is Nothing And Not Intersect(valCell, bcRange) Is Nothing Then
+                    Me.Range("B" & valCell.Row).Validation.Delete
+                End If
+            Next valCell
+        End If
         
         On Error Resume Next
         Me.Protect password:="nexttsol", DrawingObjects:=True, Contents:=True, Scenarios:=True
         On Error GoTo 0
     End If
 
-    ' --- Validação dinâmica na coluna B ao alterar B diretamente ---
-    Dim bRange As Range
-    Set bRange = Intersect(Target, Me.Range("A7:A1007"))
-
-    If Not bRange Is Nothing Then
-        On Error Resume Next
-        Me.Unprotect "nexttsol"
-        On Error GoTo 0
-        
-        Dim bCell As Range
-        For Each bCell In bRange
-            If Not IsEmpty(bCell.Value) Then
-                AplicarValidacaoDinamica Me, bCell.Row
-            End If
-        Next bCell
-        
-        On Error Resume Next
-        Me.Protect password:="nexttsol", DrawingObjects:=True, Contents:=True, Scenarios:=True
-        On Error GoTo 0
-    End If
-
-    ' --- Verificação geral da planilha ---
-    Dim intersecaoAteBB As Range
-    Set intersecaoAteBB = Intersect(Target, Me.Range("A7:BB1007"))
-
+    ' --- Codigo existente para verificacao geral ---
     If Not intersecaoAteBB Is Nothing Then
         Sheets("Cadastro de Produtos").Unprotect password:="nexttsol"
         Call VerificarSecaoEspecie.VerificarSecaoCompleta
         Call VerificarSecaoEspecie.ValidarDescricoes
         Call VerificarSecaoEspecie.ValidarEspecies
         Sheets("Cadastro de Produtos").Protect password:="nexttsol", UserInterfaceOnly:=True
-    End If
-
-    ' --- Verifica se deve salvar ---
-    Dim linha As Long
-    Dim deveSalvar As Boolean
-    deveSalvar = False
-
-    If Not intersecaoAteBB Is Nothing Then
-        For Each cel In intersecaoAteBB.Cells
-            linha = cel.Row
-            If linha >= 7 And linha <= 1007 Then
-                If Trim(UCase(Me.Cells(linha, "BK").Value)) = "OK" Then
-                    deveSalvar = True
+        
+        Dim bkChanged As Range
+        Set bkChanged = Intersect(Target, Me.Range("BK7:BK1007"))
+        
+        If Not bkChanged Is Nothing Then
+            Dim bkCel As Range
+            For Each bkCel In bkChanged
+                If UCase(Trim(bkCel.Value)) = "OK" Then
+                    ThisWorkbook.Save
                     Exit For
                 End If
-            End If
-        Next cel
+            Next bkCel
+        End If
     End If
 
-    If deveSalvar Then ThisWorkbook.Save
-
-    ' --- Verificação de duplicatas em F com Dados Consolidados ---
+    ' --- Codigo existente para verificar valores duplicados ---
     If Not Intersect(Target, Me.Range("F7:F1007")) Is Nothing Then
         Dim fCelula As Range
-        Dim wsDados As Worksheet
-
+        
         On Error Resume Next
-        Set wsDados = Nothing
-        On Error Resume Next
-
-        For Each ws In ThisWorkbook.Worksheets
-            If LCase(ws.Name) = LCase("Dados Consolidados") Then
-                Set wsDados = ws
-                Exit For
-            End If
-        Next ws
+        Set wsDados = Worksheets("Dados Consolidados")
         On Error GoTo TratarErro
-
-        Set CheckRange = wsDados.Range("AU1:AU1007")
-
-        For Each fCelula In Intersect(Target, Me.Range("F7:F1007"))
-            If Not IsEmpty(fCelula.Value) And Trim(fCelula.Value) <> "" Then
-                Dim searchValue As String
-                searchValue = Trim(fCelula.Value)
-                
-                Set FoundCell = CheckRange.Find(What:=searchValue, LookIn:=xlValues, LookAt:=xlWhole, MatchCase:=False)
-                
-                If Not FoundCell Is Nothing Then
-                    MsgBox "O valor '" & fCelula.Value & "' já existe no banco de dados.", vbExclamation
-                    fCelula.ClearContents
+        
+        If Not wsDados Is Nothing Then
+            Set CheckRange = wsDados.Range("AU1:AU1007")
+            
+            For Each fCelula In Intersect(Target, Me.Range("F7:F1007"))
+                If Not IsEmpty(fCelula.Value) And Trim(fCelula.Value) <> "" Then
+                    Dim searchValue As String
+                    searchValue = Trim(fCelula.Value)
+                    
+                    Set FoundCell = CheckRange.Find(What:=searchValue, LookIn:=xlValues, LookAt:=xlWhole, MatchCase:=False)
+                    
+                    If Not FoundCell Is Nothing Then
+                        MsgBox "O valor '" & fCelula.Value & "' ja existe no banco de dados.", vbExclamation
+                        fCelula.ClearContents
+                    End If
                 End If
-            End If
-        Next fCelula
+            Next fCelula
+        End If
     End If
 
 Finalizar:
+    Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
     Application.EnableEvents = True
     Exit Sub
 
 TratarErro:
-    MsgBox "Erro na linha " & Erl & ": " & Err.Description & vbCrLf & _
+    MsgBox "Erro: " & Err.Description & vbCrLf & _
            "Objeto com problema: " & TypeName(Err.Source), vbCritical
     Resume Finalizar
 End Sub
 
-
-' === Função auxiliar de validação dinâmica ===
 Private Sub AplicarValidacaoDinamica(ws As Worksheet, linha As Long)
     On Error Resume Next
     Dim formula As String
@@ -209,21 +203,18 @@ Private Sub AplicarValidacaoDinamica(ws As Worksheet, linha As Long)
     nomeSecao = "SecaoCompleta" & ws.Range("BC" & linha).Value
     
     If Evaluate("ISREF('Dados Consolidados'!" & nomeSecao & ")") Then
-        ws.Range("B" & linha).Validation.Delete
-        formula = "=INDIRECT(""'Dados Consolidados'!" & nomeSecao & """)"
-        
         With ws.Range("B" & linha).Validation
-            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:=formula
+            .Delete
+            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, _
+                 Formula1:="=INDIRECT(""'Dados Consolidados'!" & nomeSecao & """)"
             .IgnoreBlank = True
             .ShowError = True
             .ShowInput = True
             .ShowDropDown = True
-            .errorTitle = "Valor Inválido"
-            .errorMessage = "Por favor, selecione um valor da lista."
+            .errorTitle = "Valor Invalido"
+            .ErrorMessage = "Por favor, selecione um valor da lista."
         End With
     Else
         ws.Range("B" & linha).Validation.Delete
     End If
 End Sub
-
-

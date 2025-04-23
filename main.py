@@ -328,7 +328,7 @@ root.resizable(False, False)
 root.columnconfigure(0, weight=1)
 root.columnconfigure(1, weight=1)
 
-image_path = "brand.png"
+image_path = os.path.join(os.getcwd(), "Public", "brand.png")
 icon_img = ImageTk.PhotoImage(file="brand-ico.ico")
 
 root.iconphoto(True, icon_img)

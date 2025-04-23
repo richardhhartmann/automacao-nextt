@@ -122,18 +122,30 @@ def processa_produto(ws, linha_excel, df, x):
         if pd.notna(valor):
             atributos_adicionais.append((secao, especie, None, idx, str(valor), None))
 
-    variacoes = []
-    for i, (col_cor, col_tamanho) in enumerate(COLUNAS_VARIACOES, start=1):
+    cores = set()
+    for col_cor, _ in COLUNAS_VARIACOES:
         cor = ws[f'{col_cor}{linha_excel}'].value
+        if pd.notna(cor):
+            cores.add(str(cor))
+    
+    tamanhos = set()
+    for _, col_tamanho in COLUNAS_VARIACOES:
         tamanho = ws[f'{col_tamanho}{linha_excel}'].value
-
-        if pd.notna(cor) and pd.notna(tamanho):
+        if pd.notna(tamanho):
+            tamanhos.add(str(tamanho))
+    
+    variacoes = []
+    ipr_codigo = 1
+    
+    for cor in sorted(cores):
+        for tamanho in sorted(tamanhos):
             variacoes.append({
-                'ipr_codigo': i,
+                'ipr_codigo': ipr_codigo,
                 'ipr_codigo_barra': ipr_codigo_barra,
-                'cor': str(cor),
-                'tamanho': str(tamanho)
+                'cor': cor,
+                'tamanho': tamanho
             })
+            ipr_codigo += 1
 
     return {
         'secao': secao,

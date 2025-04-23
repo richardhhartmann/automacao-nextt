@@ -144,10 +144,19 @@ Sub PreencherCelulasComAtributos()
                         End With
                     End If
                 End With
-                    
-                With ws.Range(ws.Cells(4, colunaInicial + i), ws.Cells(6, colunaInicial + i))
+
+                With ws.Cells(4, colunaInicial + i)
+                    .Interior.Color = RGB(243, 243, 243)
+                    With .Borders
+                        .LineStyle = xlContinuous
+                        .Weight = xlThin
+                        .Color = RGB(217, 217, 217)
+                    End With
+                End With
+
+                With ws.Range(ws.Cells(5, colunaInicial + i), ws.Cells(6, colunaInicial + i))
                     .Merge
-                    .Value = "Maximo 50 caracteres."
+                    .Value = "Maximo 50 caracteres." 
                     .Interior.Color = RGB(243, 243, 243)
                     .HorizontalAlignment = xlCenter
                     .VerticalAlignment = xlCenter

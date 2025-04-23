@@ -118,10 +118,12 @@ ErroHandler:
 End Function
 
 Private Sub LimparIntervalosPlanilha(ws As Worksheet)
+    Const SENHA As String = "nexttsol"
     Application.ScreenUpdating = False
     Application.Calculation = xlCalculationManual
     
     With ws
+        ws.Unprotect SENHA
         .Range("A1:A10070,B1:B10070,E1:E10070,R1:T10070,AR1:AS10070,AT1:AT10070,AV1:AW10070").ClearContents
     End With
     
@@ -266,9 +268,9 @@ Private Sub AtualizarModelosPorAtributo(conn As Object, ws As Worksheet)
         rs.Close
 
         tipoDado = tpaCodigos(codigo)(1)
-        ws.Cells(linha, colunaAtual).Value = tipoDado ' Adiciona o tipo de dado na ultima linha
+        ws.Cells(linha, colunaAtual).Value = tipoDado
+        ws.Cells(linha + 1, colunaAtual).Value = codigo
 
         colunaAtual = colunaAtual + 1
     Next codigo
 End Sub
-

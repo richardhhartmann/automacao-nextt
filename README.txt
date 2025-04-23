@@ -50,7 +50,7 @@ python main.py
 
 Alternativamente, se desejar especificar o caminho completo do interpretador Python dentro do ambiente virtual:
 
-C:/Users/stk/Desktop/dev/automacao-nextt/.venv/Scripts/python.exe C:/Users/stk/Desktop/dev/automacao-nextt/main.py
+/automacao-nextt/.venv/Scripts/python.exe /automacao-nextt/main.py
 
 Com o ambiente corretamente configurado, o sistema estará pronto para processar cadastros em lote de forma automática e eficiente.
 
