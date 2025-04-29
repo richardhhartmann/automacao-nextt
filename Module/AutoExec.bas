@@ -12,6 +12,7 @@ Private Sub Workbook_Open()
     
     With ws
         If Not .Range("O3").Value Like "Atualizado*" Then
+            Call CheckDB.StartDBMonitoring
             Call AtualizarDadosConsolidados
             Call AtualizarDadosPedido
             Call GerarFormulaDinamica.GerarFormulaDinamica
@@ -22,7 +23,8 @@ Private Sub Workbook_Open()
             Call OcultarAbasProtegidas.OcultarAbasProtegidas
             Call CriarShapeBotao.CriarShapeBotao
             Call AplicarValidacaoObrigatoria.AplicarValidacaoObrigatoria
-
+            Call ConsultaFiliais.ConsultaFiliais
+        
             Application.EnableEvents = False
             With ThisWorkbook.Sheets("Nextt").Range("O3")
                 .Value = "Atualizado em " & Now
@@ -30,6 +32,7 @@ Private Sub Workbook_Open()
                 .Font.Color = RGB(102, 102, 102)
             End With
             Application.EnableEvents = True
+
         Else
             Call AtualizarInterface.AtualizarInterface
         End If

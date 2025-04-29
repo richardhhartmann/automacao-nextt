@@ -2,89 +2,114 @@ import pyodbc
 import json
 import os
 import sys
+from tqdm import tqdm
+from collections import defaultdict
 
 def get_connection_from_file(file_name):
     """Lê o arquivo JSON e cria uma conexão com o banco de dados."""
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        
         file_path = os.path.join(script_dir, '..', file_name)
         
         with open(file_path, 'r') as f:
             config = json.load(f)
 
-        driver = config.get('driver', None)
-        server = config.get('server', None)
-        database = config.get('database', None)
-        username = config.get('username', None)
-        password = config.get('password', None)
-        trusted_connection = config.get('trusted_connection', None)
+        driver = config.get('driver')
+        server = config.get('server')
+        database = config.get('database')
+        username = config.get('username')
+        password = config.get('password')
+        trusted_connection = config.get('trusted_connection', 'no').lower()
 
-        if trusted_connection.lower() == 'yes':
-            string_connection = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};Trusted_Connection={trusted_connection}"
+        if trusted_connection == 'yes':
+            conn_str = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};Trusted_Connection=yes"
         else:
-            string_connection = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};UID={username};PWD={password};"
+            conn_str = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};UID={username};PWD={password}"
 
-        connection = pyodbc.connect(string_connection)
-        cursor = connection.cursor()
-
-        return connection, cursor
+        conn = pyodbc.connect(conn_str)
+        return conn, conn.cursor()
 
     except Exception as e:
-        print(f"Erro ao conectar ao banco de dados: {e}")
+        print(f"\nErro ao conectar ao banco de dados: {e}", file=sys.stderr)
         sys.exit(1)
 
 def empresa_nome():
-    connection, cursor = get_connection_from_file('conexao_temp.txt')
-    cursor.execute("""
-        SELECT * FROM tb_empresa
-    """)
-
-    empresa = cursor.fetchone()
-    cursor.close()
-    connection.close()
-
-    return empresa
+    """Obtém o nome da empresa de forma mais eficiente."""
+    try:
+        conn, cursor = get_connection_from_file('conexao_temp.txt')
+        cursor.execute("SELECT TOP 1 emp_descricao FROM tb_empresa")
+        empresa = cursor.fetchone()
+        return empresa[0] if empresa else "Desconhecida"
+    finally:
+        cursor.close()
+        conn.close()
 
 def search_in_database(search_term):
-    connection, cursor = get_connection_from_file('conexao_temp.txt')
+    """Busca otimizada com progress bar e tratamento de erros."""
+    conn, cursor = None, None
+    try:
+        conn, cursor = get_connection_from_file('conexao_temp.txt')
+        
+        # Primeiro obtemos todas as tabelas e colunas relevantes
+        cursor.execute("""
+            SELECT TABLE_NAME, COLUMN_NAME
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_CATALOG = DB_NAME()
+            AND DATA_TYPE IN ('char', 'varchar', 'nchar', 'nvarchar', 'text', 'ntext')
+        """)
+        tables_and_columns = cursor.fetchall()
+        
+        if not tables_and_columns:
+            print("\nNenhuma tabela ou coluna válida encontrada.")
+            return
 
-    cursor.execute("""
-        SELECT TABLE_NAME, COLUMN_NAME
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_CATALOG = DB_NAME()
-        AND DATA_TYPE IN ('char', 'varchar', 'nchar', 'nvarchar')
-    """)
+        results = defaultdict(list)
+        total = len(tables_and_columns)
+        
+        print(f"\nBuscando em {total} colunas...")
+        
+        # Barra de progresso
+        with tqdm(tables_and_columns, unit="col", desc="Progresso") as pbar:
+            for table, column in pbar:
+                try:
+                    # Consulta otimizada
+                    query = f"""
+                    SELECT TOP 1000 CAST([{column}] AS NVARCHAR(MAX)) AS Value 
+                    FROM [{table}] 
+                    WHERE [{column}] LIKE ? ESCAPE '\\'
+                    """
+                    cursor.execute(query, (f'%{search_term}%',))
+                    
+                    for row in cursor:
+                        results[f"{table}.{column}"].append(row.Value)
+                        
+                except pyodbc.Error as e:
+                    pbar.write(f"Erro em {table}.{column}: {str(e)}")
+                    continue
 
-    tables_and_columns = cursor.fetchall()
+        # Exibição dos resultados
+        if results:
+            print(f"\nResultados para '{search_term}':")
+            for location, values in results.items():
+                table, column = location.split('.')
+                print(f"\nTabela: {table}\nColuna: {column}")
+                for i, value in enumerate(values[:5], 1):  # Mostra até 5 valores por coluna
+                    print(f"  {i}. {value}")
+                if len(values) > 5:
+                    print(f"  (+ {len(values)-5} resultados adicionais)")
+        else:
+            print(f"\nNenhum resultado encontrado para '{search_term}'")
 
-    results = []
-    for table, column in tables_and_columns:
-        try:
-            query = f"SELECT DISTINCT '{table}' AS TableName, '{column}' AS ColumnName, CAST([{column}] AS NVARCHAR(MAX)) AS Value FROM [{table}] WHERE [{column}] LIKE ?"
-            cursor.execute(query, (f'%{search_term}%',))
-            rows = cursor.fetchall()
-            if rows:
-                results.extend(rows)
-        except pyodbc.ProgrammingError:
-            query = f"SELECT '{table}' AS TableName, '{column}' AS ColumnName, CAST([{column}] AS NVARCHAR(MAX)) AS Value FROM [{table}] WHERE [{column}] LIKE ?"
-            cursor.execute(query, (f'%{search_term}%',))
-            rows = cursor.fetchall()
-            if rows:
-                unique_rows = { (row.TableName, row.ColumnName, row.Value) for row in rows }
-                results.extend([ type('Row', (), {'TableName': t, 'ColumnName': c, 'Value': v}) 
-                               for t, c, v in unique_rows ])
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()
 
-    if results:
-        print(f"Resultados encontrados para o termo '{search_term}':")
-        for result in results:
-            print(f"Tabela: {result.TableName}, Coluna: {result.ColumnName}, Valor: {result.Value}")
+if __name__ == "__main__":
+    empresa = empresa_nome()
+    print(f"\nSistema de busca - {empresa}")
+    search_term = input("Digite o termo de busca: ").strip()
+    
+    if not search_term:
+        print("Termo de busca não pode ser vazio.")
     else:
-        print(f"Nenhum resultado encontrado para o termo '{search_term}'.")
-
-    cursor.close()
-    connection.close()
-
-empresa = empresa_nome()
-search_term = input(f"Digite o termo que deseja buscar no banco de dados de {empresa[1]}: ")
-search_in_database(search_term)
+        search_in_database(search_term)

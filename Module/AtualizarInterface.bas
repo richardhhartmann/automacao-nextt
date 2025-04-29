@@ -6,6 +6,8 @@ Public Sub AtualizarInterface()
     ws.Unprotect password:="nexttsol"
     
     Call AtualizarDadosConsolidados
+    Call AtualizarDadosPedido
+    Call CheckDB.StartDBMonitoring
 
     With ThisWorkbook.Sheets("Nextt").Range("O3")
         .Value = "Atualizado em " & Now

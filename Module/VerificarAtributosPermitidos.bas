@@ -40,10 +40,10 @@ Sub AtualizarSecaoEspecie(Optional linhaUnica As Variant)
     
     ws.Unprotect password:="nexttsol"
     
-    ' Definindo as linhas para iteraÃ§Ã£o, dependendo da seleÃ§Ã£o
+    ' Definindo as linhas para iteraA§A£o, dependendo da seleA§A£o
     Dim linhaInicial As Long, linhaFinal As Long
     If IsMissing(linhaUnica) Then
-        ' Verificar se hÃ¡ vÃ¡rias seleÃ§Ãµes
+        ' Verificar se hA¡ vA¡rias seleA§Aµes
         If TypeName(Selection) = "Range" Then
             linhaInicial = Selection.Cells(1, 1).Row
             linhaFinal = Selection.Cells(Selection.Cells.Count).Row

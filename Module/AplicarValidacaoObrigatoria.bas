@@ -57,7 +57,7 @@ Sub AplicarValidacaoObrigatoria()
     Application.Calculation = xlCalculationManual
     Application.EnableEvents = False
     
-    ' ========= VALIDACÃ•ES BASICAS =========
+    ' ========= VALIDACA•ES BASICAS =========
     For coluna = 1 To ultimaColuna
         If ws.Cells(linhaObrigatorio, coluna).Value = "Obrigatorio" Then
             Set intervalo = ws.Range(ws.Cells(linhaInicioValidacao, coluna), ws.Cells(linhaFimValidacao, coluna))
@@ -75,14 +75,29 @@ Sub AplicarValidacaoObrigatoria()
         End If
     Next coluna
 
-    ' ========= VALIDACÃ•ES ESPECIFICAS =========
+    ' ========= VALIDACA•ES ESPECIFICAS =========
     
     ' Validacao de tamanho de texto
     ApplySimpleValidation ws.Range("C7:C1007,D7:D1007,F7:F1007,G7:G1007"), _
                          "=LEN(C7)<=50", _
                          "Limite de Caracteres", _
                          "Maximo de 50 caracteres permitidos."
+
+    ApplySimpleValidation wsPedido.Range("A7:A1007"), _
+                         "=LEN(A7)<=50", _
+                         "Limite de Caracteres", _
+                         "Maximo de 50 caracteres permitidos."
+
+    ApplySimpleValidation wsPedido.Range("I7:I1007"), _
+                         "=LEN(I7)<=1000", _
+                         "Limite de Caracteres", _
+                         "Maximo de 1000 caracteres permitidos."
     
+    ApplySimpleValidation wsPedido.Range("L7:U1007"), _
+                         "=LEN(L7)<=9", _
+                         "Limite de Caracteres", _
+                         "Maximo de 9 caracteres permitidos."
+
     ' Validacao de EAN
     ApplySimpleValidation ws.Range("Q7:Q1007"), _
                          "=AND(ISNUMBER(--A1),LEN(A1)<=20,INT(--A1)=--A1)", _
@@ -96,6 +111,12 @@ Sub AplicarValidacaoObrigatoria()
                          "Valor Invalido", _
                          "Digite um valor entre 1 e 99.999.999"
     ws.Range("M7:M1007").NumberFormat = """R$"" #,##0.00"
+
+    ApplySimpleValidation wsPedido.Range("V7:AE1007"), _
+                         "=AND(ISNUMBER(V1),V1>=1,V1<=99999999)", _
+                         "Valor Invalido", _
+                         "Digite um valor entre 1 e 99.999.999"
+    ws.Range("V7:AE1007").NumberFormat = """R$"" #,##0.00"
     
     ' Validacao percentual
     ApplySimpleValidation ws.Range("N7:N1007,O7:O1007"), _
@@ -124,8 +145,10 @@ Sub AplicarValidacaoObrigatoria()
     
     ApplyDropdown wsPedido, wsDadosPedido, "B7:B1007", "B1:B100700"
     ApplyDropdown wsPedido, wsDadosPedido, "C7:C1007", "C1:C100700"
+    ApplyDropdown wsPedido, wsDadosPedido, "H7:H1007", "H1:H100700"
+    ApplyDropdown wsPedido, wsDadosPedido, "K7:K1007", "K1:K100700"
     
-    ' Listas suspensas dinÃ¢micas (colunas Z a BB)
+    ' Listas suspensas dinamicas (colunas Z a BB)
     For col = Columns("Z").Column To Columns("BB").Column
         colLetter = Split(ws.Cells(1, col).Address(True, False), "$")(0)
         
@@ -173,7 +196,7 @@ ErrorHandler:
            "Na linha: " & Erl, vbCritical
 End Sub
 
-' ========= FUNCÃ•ES AUXILIARES =========
+' ========= FUNCA•ES AUXILIARES =========
 Function WorksheetExists(sheetName As String) As Boolean
     On Error Resume Next
     WorksheetExists = (ThisWorkbook.Sheets(sheetName).Name <> "")

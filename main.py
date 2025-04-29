@@ -127,7 +127,7 @@ if not os.path.exists(pasta_modulos):
 modulos_vba = [
     os.path.join(pasta_modulos, arquivo)
     for arquivo in os.listdir(pasta_modulos)
-    if arquivo.endswith((".bas", ".frm")) and arquivo != "AutoExec.bas"
+    if arquivo.endswith((".bas", ".frm", ".cls")) and arquivo != "AutoExec.bas"
 ]
 
 caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'

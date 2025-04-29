@@ -1,5 +1,5 @@
-import win32com.client
 import os
+import win32com.client
 import pyodbc
 import time
 import pythoncom
@@ -7,6 +7,7 @@ import json
 import openpyxl
 from openpyxl.drawing.image import Image
 from tqdm import tqdm
+from datetime import datetime
 import sys
 
 DEBUG = False 
@@ -71,32 +72,29 @@ def obter_nome_empresa():
         return "Erro"
 
 def converter_xlsx_para_xlsm(caminho_xlsx, nome_empresa):
-    """Converte um arquivo .xlsx para .xlsm, incluindo o nome da empresa."""
+    """Converte um arquivo .xlsx para .xlsm, incluindo o nome da empresa e data/hora."""
     if not os.path.exists(caminho_xlsx):
         print(f"Erro: O arquivo {caminho_xlsx} não foi encontrado.")
         return None
 
-    nome_empresa = nome_empresa.replace(" ", "_")
-    caminho_xlsm = caminho_xlsx.replace(".xlsx", f" - {nome_empresa}.xlsm")
+    data_formatada = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")
+    base_name = os.path.splitext(caminho_xlsx)[0]
+    caminho_xlsm = f"{base_name} - {nome_empresa} - {data_formatada}.xlsm"
+    
     excel = None
     wb = None
 
     try:
-        debug_print(f"Iniciando conversão de {caminho_xlsx} para {caminho_xlsm}")
+        pythoncom.CoInitialize()
+        print(f"Iniciando conversão de {caminho_xlsx} para {caminho_xlsm}")
         
-        with mostrar_barra_progresso(4, "Convertendo arquivo") as progresso:
-            excel = win32com.client.Dispatch("Excel.Application")
-            excel.Visible = False
-            progresso.update(1)
+        excel = win32com.client.Dispatch("Excel.Application")
+        excel.Visible = False
+        excel.DisplayAlerts = False
             
-            wb = excel.Workbooks.Open(os.path.abspath(caminho_xlsx))
-            progresso.update(1)
+        wb = excel.Workbooks.Open(os.path.abspath(caminho_xlsx))
             
-            wb.SaveAs(os.path.abspath(caminho_xlsm), FileFormat=52)
-            progresso.update(1)
-            
-            wb.Close(False)
-            progresso.update(1)
+        wb.SaveAs(os.path.abspath(caminho_xlsm), FileFormat=52)
             
         print("Conversão concluída com sucesso!")
         return caminho_xlsm
@@ -105,8 +103,18 @@ def converter_xlsx_para_xlsm(caminho_xlsx, nome_empresa):
         print(f"Erro ao converter o arquivo: {e}")
         return None
     finally:
-        if excel is not None:
-            excel.Quit()
+        try:
+            if wb is not None:
+                wb.Close(SaveChanges=False)
+            if excel is not None:
+                excel.Quit()
+        except Exception as e:
+            print(f"Erro ao fechar Excel: {e}")
+        
+        pythoncom.CoUninitialize()
+        del wb
+        del excel
+        time.sleep(1)
 
 def importar_codigo_para_aba(wb, nome_aba, caminho_codigo):
     """Importa um código VBA para uma aba específica da planilha."""
@@ -185,9 +193,13 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba, pasta_modulos):
     wb = None
 
     try:
+        pythoncom.CoInitialize()
+        
         with mostrar_barra_progresso(10, "Importando módulos VBA") as progresso:
             excel = win32com.client.Dispatch("Excel.Application")
             excel.Visible = False
+            excel.DisplayAlerts = False
+            
             debug_print(f"Abrindo a planilha: {caminho_planilha_xlsm}")
             wb = excel.Workbooks.Open(os.path.abspath(caminho_planilha_xlsm))
             progresso.update(1)
@@ -202,7 +214,8 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba, pasta_modulos):
                 "Cadastro de Marcas": "cadastro_de_marcas.bas",
                 "Cadastro de Segmento": "cadastro_de_segmento.bas",
                 "Cadastro de Secao": "cadastro_de_secao.bas",
-                "Cadastro de Especie": "cadastro_de_especie.bas"
+                "Cadastro de Especie": "cadastro_de_especie.bas",
+                "Cadastro de Pedidos": "cadastro_de_pedidos.bas"
             }
             
             for nome_aba, nome_arquivo in mapeamento_abas.items():
@@ -263,7 +276,6 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba, pasta_modulos):
             
         print("Salvando e fechando a planilha...")
         wb.Save()
-        wb.Close()
         print("Processo concluído com sucesso!")
         
     except Exception as e:
@@ -271,13 +283,18 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba, pasta_modulos):
     finally:
         try: 
             if wb is not None:
-                debug_print("Encerrando o Excel...")
-                wb.Close(SaveChanges=False)
+                debug_print("Fechando workbook...")
+                wb.Close(SaveChanges=True)
+            if excel is not None:
+                debug_print("Encerrando Excel...")
                 excel.Quit()
-                del excel
-                pythoncom.CoUninitialize()
         except Exception as e:
             debug_print(f"Erro ao encerrar Excel: {e}")
+        
+        pythoncom.CoUninitialize()
+        del wb
+        del excel
+        time.sleep(1)
 
 def criar_botoes_e_atribuir_macros(wb):
     """Cria botões nas abas e atribui macros a eles."""
@@ -335,26 +352,46 @@ def adicionar_referencia_vba(caminho_arquivo):
     try:
         debug_print("Adicionando referências VBA...")
         
-        with mostrar_barra_progresso(3, "Adicionando referências") as progresso:
-            excel = win32com.client.Dispatch("Excel.Application")
-            excel.Visible = False
-            progresso.update(1)
+        excel = None
+        wb = None
+        
+        try:
+            pythoncom.CoInitialize()
             
-            wb = excel.Workbooks.Open(caminho_arquivo)
-            progresso.update(1)
+            with mostrar_barra_progresso(3, "Adicionando referências") as progresso:
+                excel = win32com.client.Dispatch("Excel.Application")
+                excel.Visible = False
+                excel.DisplayAlerts = False
+                progresso.update(1)
+                
+                wb = excel.Workbooks.Open(caminho_arquivo)
+                progresso.update(1)
+                
+                vb_proj = wb.VBProject
+                vb_proj.References.AddFromFile("C:\\Windows\\System32\\scrrun.dll")
+                vb_proj.References.AddFromFile("C:\\Program Files\\Common Files\\System\\ado\\msado20.tlb")
+                wb.Save()
+                progresso.update(1)
+                
+            print("Referências adicionadas com sucesso!")
+        except Exception as e:
+            print(f"Erro ao adicionar referências: {e}")
+        finally:
+            try:
+                if wb is not None:
+                    wb.Close(SaveChanges=True)
+                if excel is not None:
+                    excel.Quit()
+            except Exception as e:
+                print(f"Erro ao fechar Excel: {e}")
             
-            vb_proj = wb.VBProject
-            vb_proj.References.AddFromFile("C:\\Windows\\System32\\scrrun.dll")
-            wb.Save()
-            wb.Close()
-            progresso.update(1)
+            pythoncom.CoUninitialize()
+            del wb
+            del excel
+            time.sleep(1)
             
-        print("Referências adicionadas com sucesso!")
     except Exception as e:
-        print(f"Erro ao adicionar referências: {e}")
-    finally:
-        if excel is not None:
-            excel.Quit()
+        print(f"Erro geral ao adicionar referências: {e}")
 
 def apagar_arquivo(caminho_arquivo):
     """Remove o arquivo original após a conversão."""
