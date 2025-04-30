@@ -3,6 +3,7 @@ Private Sub Workbook_Open()
     Dim imageFolder As String
     Dim brandPath As String, uploadPath As String, refreshPath As String
     Dim shp As Shape
+    Dim response As Integer
     
     Set ws = ThisWorkbook.Sheets("Nextt")
     imageFolder = ThisWorkbook.Path & "\Public\"
@@ -12,7 +13,7 @@ Private Sub Workbook_Open()
     
     With ws
         If Not .Range("O3").Value Like "Atualizado*" Then
-            Call CheckDB.StartDBMonitoring
+            
             Call AtualizarDadosConsolidados
             Call AtualizarDadosPedido
             Call GerarFormulaDinamica.GerarFormulaDinamica
@@ -23,6 +24,7 @@ Private Sub Workbook_Open()
             Call OcultarAbasProtegidas.OcultarAbasProtegidas
             Call CriarShapeBotao.CriarShapeBotao
             Call AplicarValidacaoObrigatoria.AplicarValidacaoObrigatoria
+            Call AplicarValidacaoObrigatoria.VerificarEDefinirDropDowns
             Call ConsultaFiliais.ConsultaFiliais
         
             Application.EnableEvents = False
@@ -32,6 +34,12 @@ Private Sub Workbook_Open()
                 .Font.Color = RGB(102, 102, 102)
             End With
             Application.EnableEvents = True
+
+            response = MsgBox("Deseja executar o monitoramento do banco de dados em tempo real?", vbQuestion + vbYesNo, "Monitoramento em Tempo Real")
+            
+            If response = vbYes Then
+                Call CheckDB.StartDBMonitoring
+            End If
 
         Else
             Call AtualizarInterface.AtualizarInterface
@@ -73,4 +81,12 @@ Private Sub Workbook_Open()
             End With
         End If
     End With
+End Sub
+
+Private Sub Workbook_BeforeClose(Cancel As Boolean)
+    On Error Resume Next
+    If Not dbListener Is Nothing Then
+        dbListener.Terminate
+        Set dbListener = Nothing
+    End If
 End Sub

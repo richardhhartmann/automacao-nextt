@@ -9,7 +9,7 @@ from tkinter import font, Toplevel, ttk
 from PIL import Image, ImageTk
 from Auto.db_connection import preencher_planilha
 from Auto.db_module import importar_modulo_vba
-from cadastro_produto import cadastrar_produto
+from cadastros_auto_nextt import cadastrar_produto
 
 def resource_path(relative_path):
     """ Retorna o caminho absoluto para recursos, tanto para desenvolvimento quanto para o executável """

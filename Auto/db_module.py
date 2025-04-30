@@ -77,9 +77,9 @@ def converter_xlsx_para_xlsm(caminho_xlsx, nome_empresa):
         print(f"Erro: O arquivo {caminho_xlsx} não foi encontrado.")
         return None
 
-    data_formatada = datetime.now().strftime("%d-%m-%Y-%H_%M_%S")
+    data_formatada = datetime.now().strftime("%d-%m-%Y-%H_%M")
     base_name = os.path.splitext(caminho_xlsx)[0]
-    caminho_xlsm = f"{base_name} - {nome_empresa} - {data_formatada}.xlsm"
+    caminho_xlsm = f"{base_name} {nome_empresa} - {data_formatada}.xlsm"
     
     excel = None
     wb = None

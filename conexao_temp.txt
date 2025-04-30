@@ -1,6 +1,6 @@
 {
     "driver": "SQL Server Native Client RDA 11.0",
-    "server": "localhost",
+    "server": "172.22.2.44",
     "database": "NexttLoja",
     "username": "sa",
     "password": "",

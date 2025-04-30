@@ -6,6 +6,7 @@ import json
 import sys
 import openpyxl
 import time
+import re
 from tkinter import filedialog
 from datetime import datetime
 from openpyxl.utils import get_column_letter, column_index_from_string
@@ -14,8 +15,10 @@ from contextlib import contextmanager
 BATCH_SIZE = 100
 LINHA_CABECALHO = 3
 COLUNA_INICIAL_ADICIONAIS = 'Z'
+COLUNA_INICIAL_ADICIONAIS_PEDIDO = 'AN'
 COLUNAS_VARIACOES = [('R', 'V'), ('S', 'W'), ('T', 'X'), ('U', 'Y')]
 DEBUG = True
+CODIGOS = 10
 
 def debug_log(message):
     if DEBUG:
@@ -42,6 +45,7 @@ def get_db_connection(file_name='conexao_temp.txt'):
         else:
             conn_str = f"DRIVER={{{driver}}};SERVER={server};DATABASE={database};UID={username};PWD={password};"
 
+        global connection, cursor
         connection = pyodbc.connect(conn_str)
         connection.autocommit = False
         cursor = connection.cursor()
@@ -67,6 +71,20 @@ def selecionar_arquivo():
     )
 
 def get_colunas_adicionais(ws, linha_cabecalho=LINHA_CABECALHO, coluna_inicial=COLUNA_INICIAL_ADICIONAIS):
+    colunas = []
+    current_col_idx = column_index_from_string(coluna_inicial)
+
+    while True:
+        col_letter = get_column_letter(current_col_idx)
+        valor = ws[f'{col_letter}{linha_cabecalho}'].value
+        if pd.isna(valor) or not valor:
+            break
+        colunas.append(col_letter)
+        current_col_idx += 1
+
+    return colunas
+
+def get_colunas_adicionais_pedido(ws, linha_cabecalho=LINHA_CABECALHO, coluna_inicial=COLUNA_INICIAL_ADICIONAIS_PEDIDO):
     colunas = []
     current_col_idx = column_index_from_string(coluna_inicial)
 
@@ -170,6 +188,46 @@ def processa_produto(ws, linha_excel, df, x):
         'linha_excel': linha_excel
     }
 
+def processa_pedido(ws, linha_excel, df, x):
+    try:
+        col_map = {
+            'cod_original': 'cod_original',
+            'fornecedor': 'fornecedor',
+            'comprador': 'comprador',
+            'dt_entrega_inicial': 'dt_entrega_inicial',
+            'dt_entrega_final': 'dt_entrega_final',
+            'condicao_pagamento': 'condicao_pagamento',
+            'qualidade': 'qualidade',
+            'parcelas': 'parcelas',
+            'observacao': 'observacao',
+            'atributo': 'atributo'
+        }
+        
+        data = {}
+        has_value = False
+        
+        for field, col in col_map.items():
+            try:
+                val = df.iloc[x][col]
+                if pd.notna(val) and (not isinstance(val, (int, float)) or (isinstance(val, (int, float)) and val != 0)):
+                    if field in ['dt_entrega_inicial', 'dt_entrega_final', 'observacao']:
+                        data[field] = str(val)[:50]
+                    else:
+                        data[field] = trata_valor(val)
+                    has_value = True
+                else:
+                    data[field] = None
+            except:
+                data[field] = None
+        
+        data['formas_pagamento'] = None
+        data['ped_status'] = 'D'
+        
+        return data if has_value else None
+        
+    except Exception as e:
+        return None
+    
 def verificar_duplicados(cursor, referencias_marcas):
     if not referencias_marcas:
         return set()
@@ -190,7 +248,7 @@ def verificar_duplicados(cursor, referencias_marcas):
     return duplicados
 
 def cadastrar_produto():
-    debug_log("Iniciando processo de cadastro")
+    debug_log("Iniciando processo de cadastro de produto")
     start_total = time.time()
     
     caminho_arquivo = selecionar_arquivo()
@@ -202,7 +260,8 @@ def cadastrar_produto():
         wb = openpyxl.load_workbook(caminho_arquivo, data_only=True)
         ws = wb["Cadastro de Produtos"]
         
-        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos", skiprows=6, header=None)
+        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Pedidos", skiprows=6, header=None, dtype={702: str})
+
         df = df.dropna(how='all')
         
         df.columns = [
@@ -221,7 +280,7 @@ def cadastrar_produto():
         
         for col in colunas_numericas:
             if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('int16')
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('int32')
 
         produtos = []
         for x in range(len(df)):
@@ -363,5 +422,248 @@ def cadastrar_produto():
         if 'wb' in locals():
             wb.close()
 
+def cadastrar_pedido():
+    debug_log("Iniciando processo de cadastro de pedido")
+    start_total = time.time()
+    
+    caminho_arquivo = selecionar_arquivo()
+    if not caminho_arquivo:
+        return []
+
+    try:
+        # 1. Processa o arquivo Excel
+        debug_log("Carregando arquivo Excel")
+        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Pedidos", skiprows=6, header=None)
+        df = df.dropna(how='all')
+        
+        if df.empty:
+            debug_log("Nenhum dado válido encontrado")
+            return []
+
+        # Obtém número real de colunas
+        num_colunas = df.shape[1]
+
+        # Lista base de nomes de colunas
+        nomes_colunas = [
+            "cod_original", "fornecedor", "comprador", "dt_entrega_inicial", "dt_entrega_final",
+            "condicao_pagamento", "qualidade", "parcelas", "observacao", "formas_pagamento",
+            "atributo"
+        ]
+        
+        # Adiciona colunas dinâmicas
+        nomes_colunas += [f"cod{i}" for i in range(10)]  # cod0 a cod9
+        nomes_colunas += [f"pag{i}" for i in range(10)]  # pag0 a pag9
+        
+        # Adiciona colunas extras, pulando a 703
+        coluna_atual = 32
+        while len(nomes_colunas) < num_colunas:
+            if coluna_atual != 703:  # Pula a coluna 703 como solicitado
+                nomes_colunas.append(f"coluna{coluna_atual}")
+            coluna_atual += 1
+
+        # Verifica e ajusta o tamanho da lista de nomes
+        if len(nomes_colunas) > num_colunas:
+            nomes_colunas = nomes_colunas[:num_colunas]
+        elif len(nomes_colunas) < num_colunas:
+            nomes_colunas += [f"extra_{i}" for i in range(num_colunas - len(nomes_colunas))]
+        
+        # Atribui os nomes das colunas
+        df.columns = nomes_colunas
+
+        # Filtra apenas linhas com código original válido
+        df = df[df['cod_original'].notna() & (df['cod_original'] != 0)]
+        
+        # Converte colunas numéricas
+        colunas_numericas = ['cod_original'] + \
+                           [f"coluna{i}" for i in [705, 706, 707, 708] if f"coluna{i}" in df.columns] + \
+                           [f"cod{i}" for i in range(10)] + \
+                           [f"pag{i}" for i in range(10)]
+        
+        for col in colunas_numericas:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('int32')
+
+        # Formata as colunas de data para incluir horas, minutos, segundos e milissegundos
+        for col_data in ['dt_entrega_inicial', 'dt_entrega_final']:
+            if col_data in df.columns:
+                df[col_data] = pd.to_datetime(df[col_data], errors='coerce')
+                df[col_data] = df[col_data].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+        # Processa os pedidos válidos
+        pedidos = []
+        for _, row in df.iterrows():
+            pedido = {
+                'cod_original': row['cod_original'],
+                'fornecedor': str(row['fornecedor'])[:50] if pd.notna(row['fornecedor']) else None,
+                'comprador': row.get('comprador', ''),
+                'dt_entrega_inicial': row.get('dt_entrega_inicial'),
+                'dt_entrega_final': row.get('dt_entrega_final'),
+                'condicao_pagamento': row.get('condicao_pagamento', 0),
+                'qualidade': row.get('qualidade', ''),
+                'parcelas': row.get('parcelas', 0),
+                'observacao': str(row['observacao'])[:50] if pd.notna(row['observacao']) else None,
+                'atributo': row.get('atributo', 0),
+                'formas_pagamento': None,
+                'ped_status': 'D'
+            }
+            pedidos.append(pedido)
+
+        debug_log(f"Total de pedidos válidos processados: {len(pedidos)}")
+        print("\nDados processados:")
+        print(df.head())
+        
+        with get_db_connection('conexao_temp.txt') as (conn, cursor):
+            try:
+                # Obtém o próximo ped_codigo
+                cursor.execute("SELECT ISNULL(MAX(ped_codigo), 0) + 1 FROM tb_pedido")
+                proximo_codigo = cursor.fetchone()[0]
+
+                # Processa e insere os pedidos
+                pedidos_inseridos = 0
+                for _, row in df.iterrows():
+                    if pd.notna(row['cod_original']) and row['cod_original'] != 0:
+                        try:
+                            # Função auxiliar para converter datas
+                            def format_sql_date(date_str):
+                                try:
+                                    dt = pd.to_datetime(date_str, errors='coerce')
+                                    return dt.strftime('%Y-%m-%d %H:%M:%S') if not pd.isna(dt) else None
+                                except:
+                                    return None
+                            # Data atual para campos de timestamp
+                            data_atual = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                            fornecedor = str(df.iloc[_, 702]).strip()
+                            comprador = str(df.iloc[_, 703])[:50] if pd.notna(df.iloc[_, 703]) else None
+
+                            # Conversão segura das datas de entrega
+                            data_entrega_inicial = format_sql_date(row['dt_entrega_inicial'])
+                            data_entrega_final = format_sql_date(row['dt_entrega_final'])
+
+                            try:
+                                cpg_codigo = int(float(row.get('condicao_pagamento', 0)))
+                            except (ValueError, TypeError):
+                                cpg_codigo = None
+
+                            # Monta o INSERT
+
+                            cursor.execute("""SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'tb_pedido' 
+                    AND COLUMN_NAME = 'ped_permite_divergencia_entrada_nf'
+                                           """)
+                            
+                            has_ped_permite_divergencia_entrada_nf = cursor.fetchone()[0] > 0
+                            
+                            if has_ped_permite_divergencia_entrada_nf:
+                                sql = """
+                                INSERT INTO tb_pedido(
+                                    ped_codigo, pes_codigo, usu_codigo_comprador, 
+                                    ped_data_emissao, ped_data_entrega_inicial, ped_data_entrega_final, 
+                                    ped_status, ped_observacao, ped_qtde_total, 
+                                    ped_valor_total, ped_qtde_entregue_total, ped_custo_medio, 
+                                    ped_codigo_original, ped_qualidade, ped_comissao_compras, 
+                                    cpg_codigo, ped_data_cadastro, usu_codigo_cadastro, 
+                                    ped_data_ult_alteracao, ped_permite_divergencia_entrada_nf
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """
+                                
+                                params = (
+                                    int(proximo_codigo), 
+                                    fornecedor,
+                                    comprador,
+                                    data_atual,
+                                    data_entrega_inicial if data_entrega_inicial else None,  # Garante NULL se data inválida
+                                    data_entrega_final if data_entrega_final else None,
+                                    'D',  # Status Digitado
+                                    str(row['observacao']).strip()[:50] if pd.notna(row['observacao']) else None,
+                                    0.0,  # ped_qtde_total
+                                    0.0,  # ped_valor_total
+                                    0.0,  # ped_qtde_entregue_total
+                                    0.0,  # ped_custo_medio
+                                    int(row['cod_original']),
+                                    str(row.get('qualidade', '')).strip(),
+                                    0.0,  # ped_comissao_compras
+                                    cpg_codigo,
+                                    data_atual,
+                                    None,
+                                    data_atual,
+                                    0  # ped_permite_divergencia_entrada_nf
+                                )
+                            else:
+                                sql = """
+                                INSERT INTO tb_pedido(
+                                    ped_codigo, pes_codigo, usu_codigo_comprador, 
+                                    ped_data_emissao, ped_data_entrega_inicial, ped_data_entrega_final, 
+                                    ped_status, ped_observacao, ped_qtde_total, 
+                                    ped_valor_total, ped_qtde_entregue_total, ped_custo_medio, 
+                                    ped_codigo_original, ped_qualidade, ped_comissao_compras, 
+                                    cpg_codigo, ped_data_cadastro, usu_codigo_cadastro, 
+                                    ped_data_ult_alteracao
+                                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """
+                                
+                                params = (
+                                    int(proximo_codigo), 
+                                    fornecedor,
+                                    comprador,
+                                    data_atual,
+                                    data_entrega_inicial if data_entrega_inicial else None,  # Garante NULL se data inválida
+                                    data_entrega_final if data_entrega_final else None,
+                                    'D',  # Status Digitado
+                                    str(row['observacao']).strip()[:50] if pd.notna(row['observacao']) else None,
+                                    0.0,  # ped_qtde_total
+                                    0.0,  # ped_valor_total
+                                    0.0,  # ped_qtde_entregue_total
+                                    0.0,  # ped_custo_medio
+                                    int(row['cod_original']),
+                                    str(row.get('qualidade', '')).strip(),
+                                    0.0,  # ped_comissao_compras
+                                    cpg_codigo,
+                                    data_atual,
+                                    comprador,  # usu_codigo_cadastro
+                                    data_atual
+                                )
+
+                            # Debug dos parâmetros antes da inserção
+                            # debug_log(f"Parâmetros lidos: {params}")
+
+                            cursor.execute(sql, params)
+                            conn.commit()
+                            proximo_codigo += 1
+                            pedidos_inseridos += 1
+                            pedido_atual = proximo_codigo-1
+                            debug_log(f"Pedido {pedido_atual} cadastrado com sucesso!")
+
+                            formas_pagamento="""
+                                INSERT INTO tb_pedido_tipo_documento(ped_codigo, tid_codigo) 
+                                VALUES (?, ?)
+                                """
+                            
+                            parametros = (
+                                pedido_atual,
+
+                            )
+
+                        except Exception as e:
+                            conn.rollback()
+                            debug_log(f"Erro ao inserir pedido {pedido_atual}: {str(e)}")
+                            debug_log(f"Tipo dos parâmetros: {tuple(type(p) for p in params)}")
+                            debug_log(f"Valores problemáticos: {params}")
+
+                debug_log(f"Total de pedidos cadastrados: {pedidos_inseridos}")
+                return pedidos_inseridos
+
+            except Exception as e:
+                conn.rollback()
+                debug_log(f"Erro durante o processamento no banco: {str(e)}")
+                return 0
+
+    except Exception as e:
+        debug_log(f"Erro durante o processamento: {str(e)}")
+        return 0
+    finally:
+        debug_log(f"Tempo total: {time.time() - start_total:.2f}s")
+
 if __name__ == "__main__":
-    cadastrar_produto()
+    cadastrar_pedido()

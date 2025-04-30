@@ -53,55 +53,48 @@ Private Sub Worksheet_Change(ByVal Target As Range)
 Finalizar:
     Application.EnableEvents = True
 End Sub
-
-
 Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
     Dim ws As Worksheet
     Dim i As Long
     Dim linha As Long
     Dim valor As String
+    Dim numeroItem As Long
     Dim jaExiste As Boolean
     Dim resposta As VbMsgBoxResult
     Dim ultimaColuna As Long
     Dim colunaInicial As Long
     Dim ProximaColuna As Long
     Dim valoresJ As String
-    Dim valoresEG As String
     Dim celulaJ As Range
     
     Set ws = ThisWorkbook.Sheets("Cadastro de Pedidos")
     
     linha = ActiveCell.Row
-    colunaInicial = ws.Range("EG1").Column
+    colunaInicial = ws.Range("AAF1").Column ' Inicia em AAF
     Set celulaJ = ws.Cells(linha, 10) ' Coluna J
     
-    ' Inicializa strings para armazenar valores
     valoresJ = celulaJ.Value
-    valoresEG = ""
     
-    ' Processa cada item selecionado na ListBox
     For i = 0 To ListBox1.ListCount - 1
         If ListBox1.Selected(i) Then
             valor = ListBox1.List(i)
+            numeroItem = i + 1 ' Pega o número do item (índice + 1)
             jaExiste = False
             
-            ' Verifica se ja existe na coluna EG
-            For ultimaColuna = colunaInicial To 255
-                If ws.Cells(linha, ultimaColuna).Value = valor Then
+            ' Verifica se já existe da coluna AAF em diante
+            For ultimaColuna = colunaInicial To 16384
+                If ws.Cells(linha, ultimaColuna).Value = numeroItem Then
                     jaExiste = True
-                    resposta = MsgBox("Este item ja esta na lista. Deseja removê-lo?", vbYesNo + vbQuestion, "Remover Item")
+                    resposta = MsgBox("Este item já está na lista. Deseja removê-lo?", vbYesNo + vbQuestion, "Remover Item")
                     If resposta = vbYes Then
-                        ' Remove da coluna EG
                         ws.Cells(linha, ultimaColuna).ClearContents
-                        
-                        ' Remove da celula J
                         valoresJ = Replace(valoresJ, valor, "")
                         valoresJ = Replace(valoresJ, "//", "/")
                         If Left(valoresJ, 1) = "/" Then valoresJ = Mid(valoresJ, 2)
                         If Right(valoresJ, 1) = "/" Then valoresJ = Left(valoresJ, Len(valoresJ) - 1)
                         
-                        ' Reorganiza coluna EG
-                        For ProximaColuna = ultimaColuna + 1 To 255
+                        ' Reorganiza após remoção
+                        For ProximaColuna = ultimaColuna + 1 To 16384
                             If ws.Cells(linha, ProximaColuna).Value <> "" Then
                                 ws.Cells(linha, ProximaColuna - 1).Value = ws.Cells(linha, ProximaColuna).Value
                                 ws.Cells(linha, ProximaColuna).ClearContents
@@ -111,18 +104,16 @@ Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
                     Exit For
                 End If
             Next ultimaColuna
-            
-            ' Se nao existe, adiciona
+
+            ' Se não existe, adiciona a partir de AAF
             If Not jaExiste Then
-                ' Adiciona na coluna EG
-                For ultimaColuna = colunaInicial To 255
+                For ultimaColuna = colunaInicial To 16384
                     If ws.Cells(linha, ultimaColuna).Value = "" Then
-                        ws.Cells(linha, ultimaColuna).Value = valor
+                        ws.Cells(linha, ultimaColuna).Value = numeroItem
                         Exit For
                     End If
                 Next ultimaColuna
                 
-                ' Adiciona na celula J
                 If valoresJ = "" Then
                     valoresJ = valor
                 Else
@@ -131,11 +122,11 @@ Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
             End If
         End If
     Next i
-    
-    ' Atualiza celula J
+
     celulaJ.Value = valoresJ
     Me.OLEObjects("ListBox1").Visible = False
 End Sub
+
 
 Private Sub CriarListBoxSeNecessario()
     Dim ws As Worksheet

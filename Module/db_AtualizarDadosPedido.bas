@@ -136,11 +136,14 @@ Private Sub ExecutarAtualizacoes(conn As Object, ws As Worksheet)
     ' Comprador
     AtualizarColuna conn, ws, "SELECT CAST(usu_codigo AS VARCHAR) + ' - ' + usu_nome, usu_codigo FROM tb_usuario WHERE set_codigo IS NULL and usu_codigo <> 1 and usu_codigo <> 2", Array(3, 130) 
 
-    ' Atributo
+    ' Formas de pagamento
     AtualizarColuna conn, ws, "SELECT tid_descricao FROM tb_tipo_documento", Array(10) 
 
     ' Parcelas
     AtualizarColuna conn, ws, "SELECT cpg_codigo, cpg_descricao FROM tb_condicao_pagamento ORDER BY cpg_descricao ASC", Array(131, 8)
+
+    ' Atributo
+    AtualizarColuna conn, ws, "SELECT DISTINCT apd_descricao, tpa_codigo FROM tb_atributo_pedido ORDER BY apd_descricao ASC", Array(11, 132)
 End Sub
 
 Private Sub AtualizarColuna(conn As Object, ws As Worksheet, query As String, colunas As Variant)

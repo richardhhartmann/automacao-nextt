@@ -2,14 +2,20 @@ Attribute VB_Name = "CheckDB"
 Public dbListener As clsDBListener
 
 Sub StartDBMonitoring()
-    Dim tables(1 To 2) As String
-    Dim macros(1 To 2) As String
+    Dim tables(1 To 4) As String
+    Dim macros(1 To 4) As String
     
     tables(1) = "tb_marca"
-    macros(1) = "AtualizarDadosConsolidados"
+    macros(1) = "AtualizarInterface.AtualizarInterface"
     
     tables(2) = "tb_secao"
-    macros(2) = "AtualizarDadosConsolidados"
+    macros(2) = "AtualizarInterface.AtualizarInterface"
+
+    tables(3) = "tb_especie"
+    macros(3) = "AtualizarInterface.AtualizarInterface"
+
+    tables(4) = "tb_segmento"
+    macros(4) = "AtualizarInterface.AtualizarInterface"
     
     Set dbListener = New clsDBListener
     dbListener.Initialize ThisWorkbook.Path & "\conexao_temp.txt", tables, macros

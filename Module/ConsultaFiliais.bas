@@ -118,9 +118,13 @@ Sub ConsultaFiliais()
         With ws.Range(ws.Cells(4, inicioBloco), ws.Cells(4, fimBloco))
             .Merge
             .Interior.Color = RGB(243, 243, 243)
+            .Font.Name = "Arial"
+            .Font.Size = 9
+            .Font.Italic = True
+            .Font.Color = RGB(133, 32, 12)
             .HorizontalAlignment = xlCenter
             .VerticalAlignment = xlCenter
-            .Value = ""
+            .Value = "Obrigatorio"
 
             With .Borders
                 .LineStyle = xlContinuous
@@ -134,7 +138,7 @@ Sub ConsultaFiliais()
             .Interior.Color = RGB(243, 243, 243)
             .HorizontalAlignment = xlCenter
             .VerticalAlignment = xlCenter
-            .Value = ""
+            .Value = "Distribua aqui as quantidades relacionadas ao codigo " & i 
 
             With .Borders
                 .LineStyle = xlContinuous

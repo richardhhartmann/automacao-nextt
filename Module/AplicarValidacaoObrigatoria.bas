@@ -57,7 +57,6 @@ Sub AplicarValidacaoObrigatoria()
     Application.Calculation = xlCalculationManual
     Application.EnableEvents = False
     
-    ' ========= VALIDACA•ES BASICAS =========
     For coluna = 1 To ultimaColuna
         If ws.Cells(linhaObrigatorio, coluna).Value = "Obrigatorio" Then
             Set intervalo = ws.Range(ws.Cells(linhaInicioValidacao, coluna), ws.Cells(linhaFimValidacao, coluna))
@@ -74,19 +73,22 @@ Sub AplicarValidacaoObrigatoria()
             End With
         End If
     Next coluna
-
-    ' ========= VALIDACA•ES ESPECIFICAS =========
     
     ' Validacao de tamanho de texto
-    ApplySimpleValidation ws.Range("C7:C1007,D7:D1007,F7:F1007,G7:G1007"), _
+    ApplySimpleValidation ws.Range("C7:C1007,D7:D1007,F7:F1007"), _
                          "=LEN(C7)<=50", _
                          "Limite de Caracteres", _
                          "Maximo de 50 caracteres permitidos."
 
+    ApplySimpleValidation ws.Range("G7:G1007"), _
+                        "=AND(ISNUMBER(G7),LEN(G7)<=50)", _
+                        "Valor invalido", _
+                        "Somente números com até 50 dígitos sao permitidos."
+
     ApplySimpleValidation wsPedido.Range("A7:A1007"), _
-                         "=LEN(A7)<=50", _
-                         "Limite de Caracteres", _
-                         "Maximo de 50 caracteres permitidos."
+                        "=AND(ISNUMBER(A7),LEN(A7)<=50)", _
+                        "Valor invalido", _
+                        "Somente números com até 50 dígitos sao permitidos."
 
     ApplySimpleValidation wsPedido.Range("I7:I1007"), _
                          "=LEN(I7)<=1000", _
@@ -94,22 +96,23 @@ Sub AplicarValidacaoObrigatoria()
                          "Maximo de 1000 caracteres permitidos."
     
     ApplySimpleValidation wsPedido.Range("L7:U1007"), _
-                         "=LEN(L7)<=9", _
-                         "Limite de Caracteres", _
-                         "Maximo de 9 caracteres permitidos."
+                          "=AND(ISNUMBER(L7),LEN(L7)<=9)", _
+                          "Valor invalido", _
+                          "Somente números com até 9 dígitos sao permitidos."
+
 
     ' Validacao de EAN
     ApplySimpleValidation ws.Range("Q7:Q1007"), _
-                         "=AND(ISNUMBER(--A1),LEN(A1)<=20,INT(--A1)=--A1)", _
+                         "=AND(ISNUMBER(--Q7),LEN(Q7)<=20,INT(--Q7)=--Q7)", _
                          "EAN Invalido", _
                          "Digite um numero inteiro com ate 20 digitos"
     ws.Range("Q7:Q1007").NumberFormat = "@"
     
     ' Validacao numerica
     ApplySimpleValidation ws.Range("M7:M1007"), _
-                         "=AND(ISNUMBER(M1),M1>=1,M1<=99999999)", _
+                         "=AND(ISNUMBER(M7),M7>=1,M7<=99999999)", _
                          "Valor Invalido", _
-                         "Digite um valor entre 1 e 99.999.999"
+                         "Digite um valor entre R$ 1 e R$ 99.999.999"
     ws.Range("M7:M1007").NumberFormat = """R$"" #,##0.00"
 
     ApplySimpleValidation wsPedido.Range("V7:AE1007"), _
@@ -119,14 +122,20 @@ Sub AplicarValidacaoObrigatoria()
     ws.Range("V7:AE1007").NumberFormat = """R$"" #,##0.00"
     
     ' Validacao percentual
-    ApplySimpleValidation ws.Range("N7:N1007,O7:O1007"), _
-                         "=AND(ISNUMBER(N1),N1>=0,N1<=100)", _
-                         "Valor Invalido", _
-                         "Digite um valor entre 0 e 100"
+    ApplySimpleValidation ws.Range("N7:N1007"), _
+                        "=AND(ISNUMBER(N7),N7>=0,N7<=100)", _
+                        "Valor Invalido", _
+                        "Digite um valor entre 0 e 100"
+
+    ApplySimpleValidation ws.Range("O7:O1007"), _
+                        "=AND(ISNUMBER(O7),O7>=0,O7<=100)", _
+                        "Valor Invalido", _
+                        "Digite um valor entre 0 e 100"
+
     ws.Range("N7:N1007,O7:O1007").NumberFormat = "0.00""%"""
     
     ' Validacao de atributos
-    ApplySimpleValidation ws.Range("R7:Y1007"), _
+    ApplySimpleValidation ws.Range("R7:BB1007"), _
                          "=LEN(R7)<=50", _
                          "Limite de Caracteres", _
                          "Maximo de 50 caracteres permitidos."
@@ -145,8 +154,7 @@ Sub AplicarValidacaoObrigatoria()
     
     ApplyDropdown wsPedido, wsDadosPedido, "B7:B1007", "B1:B100700"
     ApplyDropdown wsPedido, wsDadosPedido, "C7:C1007", "C1:C100700"
-    ApplyDropdown wsPedido, wsDadosPedido, "H7:H1007", "H1:H100700"
-    ApplyDropdown wsPedido, wsDadosPedido, "K7:K1007", "K1:K100700"
+    ApplyOnlyValidation wsPedido, wsDadosPedido, "J7:J1007", "J1:J100700"
     
     ' Listas suspensas dinamicas (colunas Z a BB)
     For col = Columns("Z").Column To Columns("BB").Column
@@ -196,7 +204,6 @@ ErrorHandler:
            "Na linha: " & Erl, vbCritical
 End Sub
 
-' ========= FUNCA•ES AUXILIARES =========
 Function WorksheetExists(sheetName As String) As Boolean
     On Error Resume Next
     WorksheetExists = (ThisWorkbook.Sheets(sheetName).Name <> "")
@@ -263,3 +270,199 @@ Sub ApplyDropdown(wsDestino As Worksheet, wsOrigem As Worksheet, _
     End With
     On Error GoTo 0
 End Sub
+
+Sub ApplyOnlyValidation(wsDestino As Worksheet, wsOrigem As Worksheet, _
+                 destino As String, origem As String)
+    Dim rngDest As Range, rngOrig As Range
+    Dim listFormula As String
+    
+    On Error Resume Next
+    Set rngDest = wsDestino.Range(destino)
+    Set rngOrig = wsOrigem.Range(origem)
+    
+    If rngDest Is Nothing Or rngOrig Is Nothing Then
+        Debug.Print "Intervalo invalido. Destino: " & destino & ", Origem: " & origem
+        Exit Sub
+    End If
+    
+    ' Verificar se o intervalo de origem tem dados
+    If WorksheetFunction.CountA(rngOrig) = 0 Then
+        Debug.Print "Intervalo de origem vazio: " & rngOrig.Address
+        Exit Sub
+    End If
+    
+    ' Criar formula da lista (versao simplificada)
+    listFormula = "=" & rngOrig.Address(External:=True)
+    
+    With rngDest.Validation
+        .Delete
+        .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:=listFormula
+        If Err.Number = 0 Then
+            .IgnoreBlank = True
+            .ShowError = True
+            .errorTitle = "Selecao Necessaria"
+            .ErrorMessage = "Por favor, selecione um valor da lista."
+            .InCellDropdown = False
+            Debug.Print "  Dropdown aplicado com sucesso em " & rngDest.Address
+        Else
+            Debug.Print "  ERRO ao criar lista em " & rngDest.Address & ": " & Err.Description
+            Err.Clear
+        End If
+    End With
+    On Error GoTo 0
+End Sub
+
+Sub VerificarEDefinirDropDowns()
+    Dim conn As Object, rs As Object
+    Dim sqlF As String, sqlH As String, sqlK As String
+    Dim wsPedido As Worksheet, wsDados As Worksheet
+    Dim conexaoStr As String, linha As String
+    Dim arq As Integer, caminhoArquivo As String
+
+    Set wsPedido = ThisWorkbook.Sheets("Cadastro de Pedidos")
+    Set wsDados = ThisWorkbook.Sheets("Dados Pedido")
+
+    ' Caminho do arquivo com os parâmetros de conexao
+    caminhoArquivo = ThisWorkbook.Path & "\conexao_temp.txt"
+    Dim jsonTexto As String
+    Dim driver As String, server As String, database As String
+    Dim username As String, password As String, trusted As String
+
+    arq = FreeFile
+    Open caminhoArquivo For Input As #arq
+    Do Until EOF(arq)
+        Line Input #arq, linha
+        jsonTexto = jsonTexto & linha
+    Loop
+    Close #arq
+
+    ' Extrair dados manualmente (simples e rapido para esse caso fixo)
+    driver = ExtrairJSON(jsonTexto, "driver")
+    server = ExtrairJSON(jsonTexto, "server")
+    database = ExtrairJSON(jsonTexto, "database")
+    username = ExtrairJSON(jsonTexto, "username")
+    password = ExtrairJSON(jsonTexto, "password")
+    trusted = ExtrairJSON(jsonTexto, "trusted_connection")
+
+    ' Montar a string de conexao
+    If LCase(trusted) = "yes" Then
+        conexaoStr = "Driver={" & driver & "};Server=" & server & ";Database=" & database & ";Trusted_Connection=Yes;"
+    Else
+        conexaoStr = "Driver={" & driver & "};Server=" & server & ";Database=" & database & ";UID=" & username & ";PWD=" & password & ";"
+    End If
+
+    ' Define as consultas específicas
+    sqlF = "SELECT TOP 1 * FROM tb_condicao_pagamento ORDER BY cpg_descricao ASC"   ' Para coluna F
+    sqlH = "SELECT TOP 1 * FROM tb_condicao_pagamento ORDER BY cpg_descricao ASC"   ' Para coluna H
+    sqlK = "SELECT TOP 1 * FROM tb_atributo_pedido ORDER BY apd_descricao ASC"      ' Para coluna K
+
+    Set conn = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+
+    On Error GoTo Erro
+    conn.Open conexaoStr
+
+        ' Verifica dados para coluna F
+    rs.Open sqlF, conn
+    If Not rs.EOF Then
+        ApplyDropdown wsPedido, wsDados, "F7:F1007", "F1:F100700"
+        ' Remove bloqueio e formatacao se existir
+        With wsPedido.Range("F7:F1007")
+            .Locked = False
+            .Interior.Pattern = xlNone
+            .Borders.LineStyle = xlNone
+        End With
+    Else
+        wsPedido.Columns("F:F").EntireColumn.Hidden = True
+        With wsPedido.Range("F7:F1007")
+            .Locked = True
+            .Interior.Color = RGB(217, 217, 217)  ' #D9D9D9 em RGB
+            .Borders.Color = RGB(191, 191, 191)
+            .Borders.Weight = xlThin
+            .Borders.LineStyle = xlContinuous
+            .Validation.Delete
+        End With
+        With wsPedido.Range("F5")
+            .Value = "Nenhuma condicao disponivel para esta coluna."
+        End With
+    End If
+    rs.Close
+
+    ' Verifica dados para coluna H
+    rs.Open sqlH, conn
+    If Not rs.EOF Then
+        ApplyDropdown wsPedido, wsDados, "H7:H1007", "H1:H100700"
+        With wsPedido.Range("H7:H1007")
+            .Locked = False
+            .Interior.Pattern = xlNone
+            .Borders.LineStyle = xlNone
+        End With
+    Else
+        wsPedido.Columns("H:H").EntireColumn.Hidden = True
+        With wsPedido.Range("H7:H1007")
+            .Locked = True
+            .Interior.Color = RGB(217, 217, 217)
+            .Borders.Color = RGB(191, 191, 191)
+            .Borders.Weight = xlThin
+            .Borders.LineStyle = xlContinuous
+            .Validation.Delete
+        End With
+        With wsPedido.Range("H5")
+            .Value = "Nenhuma condicao disponivel para esta coluna."
+        End With
+    End If
+    rs.Close
+
+    ' Verifica dados para coluna K
+    rs.Open sqlK, conn
+    If Not rs.EOF Then
+        ApplyDropdown wsPedido, wsDados, "K7:K1007", "K1:K100700"
+        With wsPedido.Range("K7:K1007")
+            .Locked = False
+            .Interior.Pattern = xlNone
+            .Borders.LineStyle = xlNone
+        End With
+    Else
+        wsPedido.Columns("K:K").EntireColumn.Hidden = True
+        With wsPedido.Range("K7:K1007")
+            .Locked = True
+            .Interior.Color = RGB(217, 217, 217)
+            .Borders.Color = RGB(191, 191, 191)
+            .Borders.Weight = xlThin
+            .Borders.LineStyle = xlContinuous
+            .Validation.Delete
+        End With
+        With wsPedido.Range("K5")
+            .Value = "Nenhuma condicao disponivel para esta coluna."
+        End With
+    End If
+    rs.Close
+
+    conn.Close
+    Set rs = Nothing
+    Set conn = Nothing
+
+    Exit Sub
+
+Erro:
+    MsgBox "Erro ao executar a verificacao de dados: " & Err.Description, vbCritical
+    On Error Resume Next
+    If Not rs Is Nothing Then If rs.State = 1 Then rs.Close
+    If Not conn Is Nothing Then If conn.State = 1 Then conn.Close
+    ' Garante que a planilha seja protegida mesmo em caso de erro
+End Sub
+
+Function ExtrairJSON(json As String, chave As String) As String
+    Dim padrao As String
+    padrao = """" & chave & """" & "\s*:\s*""([^""]*)"""
+    With CreateObject("VBScript.RegExp")
+        .Global = False
+        .IgnoreCase = True
+        .Pattern = padrao
+        If .test(json) Then
+            ExtrairJSON = .Execute(json)(0).SubMatches(0)
+        Else
+            ExtrairJSON = ""
+        End If
+    End With
+End Function
