@@ -147,7 +147,7 @@ Private Sub ExecutarAtualizacoes(conn As Object, ws As Worksheet)
     AtualizarColuna conn, ws, "SELECT CAST(mar_codigo AS VARCHAR) + ' - ' + mar_descricao, mar_descricao, mar_codigo FROM tb_marca", Array(5, 46, 20)
 
     ' Usuario
-    AtualizarColuna conn, ws, "SELECT usu_codigo FROM tb_usuario WHERE usu_codigo <> 1 and usu_codigo <> 2", Array(21) ' Coluna U
+    AtualizarColuna conn, ws, "SELECT usu_codigo FROM tb_usuario WHERE set_codigo IS NULL AND usu_codigo <> 1 and usu_codigo <> 2 AND usu_ativo = 1", Array(21) ' Coluna U
 
     ' Unidade
     AtualizarColuna conn, ws, "SELECT und_codigo FROM tb_unidade", Array(22) ' Coluna V

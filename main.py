@@ -5,11 +5,41 @@ import threading
 import sys
 import os
 import pyodbc
-from tkinter import font, Toplevel, ttk
+import shutil
+from tkinter import font, Toplevel, ttk, filedialog
 from PIL import Image, ImageTk
 from Auto.db_connection import preencher_planilha
 from Auto.db_module import importar_modulo_vba
 from cadastros_auto_nextt import cadastrar_produto
+
+def baixar_planilha():
+    """Salva localmente o modelo da planilha se estiver em modo importação."""
+    if var_importacao.get():
+        origem = os.path.abspath("offline/Cadastros Auto Nextt.xlsm")
+        if not os.path.exists(origem):
+            label_status.config(text="Arquivo padrão não encontrado!", fg="red")
+            return
+
+        destino = filedialog.asksaveasfilename(
+            defaultextension=".xlsm",
+            filetypes=[("Planilha Excel habilitada para macro", "*.xlsm")],
+            initialfile="Cadastros Auto Nextt.xlsm"
+        )
+
+        if destino:
+            try:
+                shutil.copy(origem, destino)
+                label_status.config(text="Planilha exportada com sucesso!", fg="green")
+            except Exception as e:
+                label_status.config(text=f"Erro ao salvar: {e}", fg="red")
+                return
+
+        # Após exportar, desmarcar o checkbox e reativar campos
+        var_importacao.set(False)
+        alternar_modo_importacao()
+    else:
+        label_status.config(text="Modo de importação não está ativado.", fg="orange")
+
 
 def resource_path(relative_path):
     """ Retorna o caminho absoluto para recursos, tanto para desenvolvimento quanto para o executável """
@@ -354,6 +384,23 @@ tk.Label(root, text="Servidor:").grid(row=3, column=0, padx=10, pady=5, sticky="
 entry_server = tk.Entry(root, width=30)
 entry_server.grid(row=3, column=1, padx=10, pady=5, sticky="w")
 btn_refresh_bancos = tk.Button(root, text="Atualizar Bancos", command=atualizar_bancos_disponiveis)
+
+var_importacao = tk.BooleanVar()
+
+def alternar_modo_importacao():
+    estado = tk.DISABLED if var_importacao.get() else tk.NORMAL
+    # Desativar ou ativar campos e botões
+    for entry in [entry_driver, entry_server, entry_database, entry_username, entry_password]:
+        entry.config(state=estado)
+    checkbutton_trusted_connection.config(state=estado)
+    btn_importar.config(state=estado)
+    btn_refresh_bancos.config(state=estado)
+
+checkbutton_importacao = tk.Checkbutton(
+    root, text="Modo Importação (Offline)", variable=var_importacao, command=alternar_modo_importacao
+)
+checkbutton_importacao.grid(row=10, column=0, columnspan=2, pady=(5, 0))
+
 btn_refresh_bancos.grid(row=9, column=1, padx=(5, 10), pady=5, sticky="w")
 
 tk.Label(root, text="Banco de Dados:").grid(row=4, column=0, padx=10, pady=5, sticky="e")
@@ -378,13 +425,22 @@ checkbutton_trusted_connection.grid(row=7, column=0, columnspan=2, pady=10)
 frame_buttons = tk.Frame(root)
 frame_buttons.grid(row=8, column=0, columnspan=2, pady=15) 
 
-btn_exportar = tk.Button(frame_buttons, text="Baixar Planilha", width=15, height=2, command=exportar_conexao)
+
+def executar_acao():
+    """Define a ação do botão com base na checkbox de Importação."""
+    if var_importacao.get():
+        baixar_planilha()
+    else:
+        exportar_conexao()
+
+
+btn_exportar = tk.Button(frame_buttons, text="Baixar Planilha", width=15, height=2, command=executar_acao)
 btn_exportar.grid(row=0, column=0, padx=10)  
 
 btn_importar = tk.Button(frame_buttons, text="Importar Planilha", width=15, height=2, command=importar)
 btn_importar.grid(row=0, column=1, padx=10)  
 
 label_status = tk.Label(root, text="", font=("Arial", 10))
-label_status.grid(row=10, column=0, columnspan=2, pady=(10, 0))
+label_status.grid(row=11, column=0, columnspan=2, pady=(10, 0))
 
 root.mainloop()

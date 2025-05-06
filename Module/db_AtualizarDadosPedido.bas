@@ -134,7 +134,7 @@ Private Sub ExecutarAtualizacoes(conn As Object, ws As Worksheet)
     AtualizarColuna conn, ws, "SELECT pes_codigo, pju_razao_social FROM tb_pessoa_juridica WHERE pju_razao_social IS NOT NULL", Array(129, 2)
 
     ' Comprador
-    AtualizarColuna conn, ws, "SELECT CAST(usu_codigo AS VARCHAR) + ' - ' + usu_nome, usu_codigo FROM tb_usuario WHERE set_codigo IS NULL and usu_codigo <> 1 and usu_codigo <> 2", Array(3, 130) 
+    AtualizarColuna conn, ws, "SELECT CAST(usu_codigo AS VARCHAR) + ' - ' + usu_nome, usu_codigo FROM tb_usuario WHERE set_codigo IS NULL and usu_codigo <> 1 and usu_codigo <> 2 AND usu_ativo = 1", Array(3, 130) 
 
     ' Formas de pagamento
     AtualizarColuna conn, ws, "SELECT tid_descricao FROM tb_tipo_documento", Array(10) 

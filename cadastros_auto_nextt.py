@@ -11,6 +11,7 @@ from tkinter import filedialog
 from datetime import datetime
 from openpyxl.utils import get_column_letter, column_index_from_string
 from contextlib import contextmanager
+from importacao import importacao
 
 BATCH_SIZE = 100
 LINHA_CABECALHO = 3
@@ -258,9 +259,16 @@ def cadastrar_produto():
     try:
         debug_log("Carregando arquivo Excel")
         wb = openpyxl.load_workbook(caminho_arquivo, data_only=True)
+        
+        if "Cadastro de Produtos" not in wb.sheetnames or "Cadastro de Pedidos" not in wb.sheetnames:
+            debug_log("Abas 'Cadastro de Produtos' ou 'Cadastro de Pedidos' não encontradas")
+            wb.close()
+            importacao(caminho_arquivo)
+            return
+            
         ws = wb["Cadastro de Produtos"]
         
-        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Pedidos", skiprows=6, header=None, dtype={702: str})
+        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos", skiprows=6, header=None)
 
         df = df.dropna(how='all')
         
@@ -471,7 +479,7 @@ def cadastrar_pedido():
         df.columns = nomes_colunas
 
         # Filtra apenas linhas com código original válido
-        df = df[df['cod_original'].notna() & (df['cod_original'] != 0)]
+        df = df[df['fornecedor'].notna() & (df['fornecedor'] != 0)]
         
         # Converte colunas numéricas
         colunas_numericas = ['cod_original'] + \
@@ -521,7 +529,7 @@ def cadastrar_pedido():
                 # Processa e insere os pedidos
                 pedidos_inseridos = 0
                 for _, row in df.iterrows():
-                    if pd.notna(row['cod_original']) and row['cod_original'] != 0:
+                    if pd.notna(row['fornecedor']) and row['fornecedor'] != 0:
                         try:
                             # Função auxiliar para converter datas
                             def format_sql_date(date_str):
@@ -577,13 +585,13 @@ def cadastrar_pedido():
                                     data_entrega_final if data_entrega_final else None,
                                     'D',  # Status Digitado
                                     str(row['observacao']).strip()[:50] if pd.notna(row['observacao']) else None,
-                                    0.0,  # ped_qtde_total
-                                    0.0,  # ped_valor_total
-                                    0.0,  # ped_qtde_entregue_total
-                                    0.0,  # ped_custo_medio
+                                    0,  # ped_qtde_total
+                                    0,  # ped_valor_total
+                                    0,  # ped_qtde_entregue_total
+                                    0,  # ped_custo_medio
                                     int(row['cod_original']),
                                     str(row.get('qualidade', '')).strip(),
-                                    0.0,  # ped_comissao_compras
+                                    0,  # ped_comissao_compras
                                     cpg_codigo,
                                     data_atual,
                                     None,
@@ -612,13 +620,13 @@ def cadastrar_pedido():
                                     data_entrega_final if data_entrega_final else None,
                                     'D',  # Status Digitado
                                     str(row['observacao']).strip()[:50] if pd.notna(row['observacao']) else None,
-                                    0.0,  # ped_qtde_total
-                                    0.0,  # ped_valor_total
-                                    0.0,  # ped_qtde_entregue_total
-                                    0.0,  # ped_custo_medio
+                                    0,  # ped_qtde_total
+                                    0,  # ped_valor_total
+                                    0,  # ped_qtde_entregue_total
+                                    0,  # ped_custo_medio
                                     int(row['cod_original']),
                                     str(row.get('qualidade', '')).strip(),
-                                    0.0,  # ped_comissao_compras
+                                    0,  # ped_comissao_compras
                                     cpg_codigo,
                                     data_atual,
                                     comprador,  # usu_codigo_cadastro
@@ -626,7 +634,7 @@ def cadastrar_pedido():
                                 )
 
                             # Debug dos parâmetros antes da inserção
-                            # debug_log(f"Parâmetros lidos: {params}")
+                            debug_log(f"Parâmetros lidos: {params}")
 
                             cursor.execute(sql, params)
                             conn.commit()
@@ -635,16 +643,119 @@ def cadastrar_pedido():
                             pedido_atual = proximo_codigo-1
                             debug_log(f"Pedido {pedido_atual} cadastrado com sucesso!")
 
-                            formas_pagamento="""
-                                INSERT INTO tb_pedido_tipo_documento(ped_codigo, tid_codigo) 
-                                VALUES (?, ?)
-                                """
-                            
-                            parametros = (
-                                pedido_atual,
+                            formas_de_pagamento = []
+                            # A coluna AAF é a coluna 708 (1-based index)
+                            coluna_inicial_pagamentos = 708 - 1  # Convertendo para 0-based index do pandas
 
-                            )
+                            if df.shape[1] > coluna_inicial_pagamentos:
+                                for col_idx in range(coluna_inicial_pagamentos, df.shape[1]):
+                                    val = row.iloc[col_idx]
+                                    if pd.notna(val) and val != 0:
+                                        try:
+                                            formas_de_pagamento.append(int(val))
+                                        except (ValueError, TypeError):
+                                            continue
 
+                            # Converte para string separada por vírgulas ou None se vazio
+                            formas_de_pagamento = ','.join(map(str, formas_de_pagamento)) if formas_de_pagamento else None
+
+                            if formas_de_pagamento:
+                                try:
+                                    # Primeiro remove quaisquer formas de pagamento existentes
+                                    cursor.execute("DELETE FROM tb_pedido_tipo_documento WHERE ped_codigo = ?", (pedido_atual,))
+                                    
+                                    # Insere cada forma de pagamento
+                                    for tid_codigo in formas_de_pagamento.split(','):
+                                        cursor.execute("""
+                                            INSERT INTO tb_pedido_tipo_documento(ped_codigo, tid_codigo) 
+                                            VALUES (?, ?)
+                                            """, (pedido_atual, int(tid_codigo)))
+                                    
+                                    conn.commit()
+                                    debug_log(f"Formas de pagamento {formas_de_pagamento} inseridas para pedido {pedido_atual}")
+                                except Exception as e:
+                                    conn.rollback()
+                                    debug_log(f"Erro ao inserir formas de pagamento para pedido {pedido_atual}: {str(e)}")
+
+                            # Primeiro obtemos todas as filiais em ordem
+                            with get_db_connection('conexao_temp.txt') as (conn, cursor):
+                                cursor.execute("SELECT fil_codigo FROM tb_filial ORDER BY fil_codigo")
+                                filiais = [row[0] for row in cursor.fetchall()]
+                                debug_log(f"Encontradas {len(filiais)} filiais no sistema")
+
+                            # Processa os códigos de produto (colunas cod0 a cod9)
+                            for i in range(10):
+                                cod_col = f"cod{i}"
+                                pag_col = f"pag{i}"
+                                
+                                if cod_col in row and pd.notna(row[cod_col]) and row[cod_col] != 0:
+                                    try:
+                                        codigo = str(int(row[cod_col])).zfill(9)
+                                        sec_codigo = int(codigo[:3])
+                                        esp_codigo = int(codigo[3:5])
+                                        prd_codigo = int(codigo[5:9])
+                                        
+                                        # Obtém o valor de custo correspondente
+                                        valor_custo = float(row[pag_col]) if pag_col in row and pd.notna(row[pag_col]) else 0
+                                        
+                                        # Calcula a coluna inicial para este produto (AN = coluna 40)
+                                        coluna_inicial_filial = 39 + (i * len(filiais))
+                                        
+                                        # Para cada filial, criamos um registro com seu respectivo fator
+                                        for filial_idx, fil_codigo in enumerate(filiais):
+                                            coluna_fator = coluna_inicial_filial + filial_idx
+                                            
+                                            fator_filial = 0  
+                                            if coluna_fator < len(row):
+                                                try:
+                                                    fator_filial = int(row.iloc[coluna_fator]) if pd.notna(row.iloc[coluna_fator]) else 0
+                                                except (ValueError, TypeError):
+                                                    fator_filial = 0
+                                            
+                                            # Insere na tb_pedido_produto (apenas na primeira filial)
+                                            if filial_idx == 0:
+                                                cursor.execute("""
+                                                    INSERT INTO tb_pedido_produto(
+                                                        ped_codigo, sec_codigo, esp_codigo, prd_codigo, 
+                                                        ppr_qtde_pedido, ppr_qtde_entregue, ppr_custo_medio, 
+                                                        ppr_valor_desconto, ppr_percentual_icms, ppr_percentual_ipi, 
+                                                        ppr_valor_icms, ppr_valor_ipi, ppr_sequencial, 
+                                                        ppr_multiplicador_unidade, ppr_data_entrega_inicial, 
+                                                        ppr_data_entrega_final, ppr_valor_icms_st
+                                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, NULL, 0, 
+                                                            '2025-04-16 13:21:00.000', '2025-04-16 13:21:00.000', NULL)
+                                                    """, 
+                                                    (pedido_atual, sec_codigo, esp_codigo, prd_codigo,
+                                                    1, 10, valor_custo)
+                                                )
+                                            
+                                            # Insere na tb_item_pedido para cada filial
+                                            cursor.execute("""
+                                                INSERT INTO tb_item_pedido(
+                                                    ped_codigo, sec_codigo, esp_codigo, prd_codigo, 
+                                                    ipr_codigo, fil_codigo, ipd_pack, ipd_qtde_pedido, 
+                                                    ipd_qtde_entregue, ipd_valor_custo, ipd_valor_desconto, 
+                                                    ipd_fator_grade, ipd_fator_filial, ipd_valor_icms, 
+                                                    ipd_valor_ipi
+                                                ) VALUES (?, ?, ?, ?, 1, ?, 1, ?, 0, ?, 0, 1, ?, 0, 0)
+                                                """,
+                                                (pedido_atual, sec_codigo, esp_codigo, prd_codigo,
+                                                fil_codigo,
+                                                fator_filial,  # esse valor provavelmente é dado pelo resultado da divisão de fator_filial por ipd_qtde_pedido
+                                                valor_custo,
+                                                fator_filial)
+                                            )
+                                            
+                                            debug_log(f"Produto {i} - Filial {fil_codigo}: Coluna {coluna_fator} = Fator {fator_filial}")
+                                        
+                                        conn.commit()
+                                        debug_log(f"Produto {codigo} processado com {len(filiais)} fatores filiais")
+                                        
+                                    except Exception as e:
+                                        conn.rollback()
+                                        debug_log(f"Erro ao processar produto {i}: {str(e)}")
+                                        debug_log(f"Valores problemáticos - Código: {row[cod_col]}, Custo: {valor_custo}")
+                                        
                         except Exception as e:
                             conn.rollback()
                             debug_log(f"Erro ao inserir pedido {pedido_atual}: {str(e)}")

@@ -37,7 +37,7 @@ Sub ConsultaFiliais()
               "Password=" & json("password") & ";" & _
               "Trusted_Connection=" & json("trusted_connection") & ";"
 
-    sql = "SELECT fil_descricao FROM tb_filial WHERE fil_descricao NOT LIKE '%Matriz%'"
+    sql = "SELECT fil_descricao FROM tb_filial"
     Set rs = conn.Execute(sql)
 
     ReDim locais(0 To 0)
