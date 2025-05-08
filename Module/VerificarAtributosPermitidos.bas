@@ -40,10 +40,8 @@ Sub AtualizarSecaoEspecie(Optional linhaUnica As Variant)
     
     ws.Unprotect password:="nexttsol"
     
-    ' Definindo as linhas para iteraA§A£o, dependendo da seleA§A£o
     Dim linhaInicial As Long, linhaFinal As Long
     If IsMissing(linhaUnica) Then
-        ' Verificar se hA¡ vA¡rias seleA§Aµes
         If TypeName(Selection) = "Range" Then
             linhaInicial = Selection.Cells(1, 1).Row
             linhaFinal = Selection.Cells(Selection.Cells.Count).Row
@@ -59,13 +57,24 @@ Sub AtualizarSecaoEspecie(Optional linhaUnica As Variant)
     For linha = linhaInicial To linhaFinal
         
         If IsError(ws.Range("BC" & linha).Value) Or IsError(ws.Range("BD" & linha).Value) Then
-            GoTo ProximaLinha
+            GoTo LimparAtributos
         End If
         
         secao = CStr(ws.Range("BC" & linha).Value)
         especie = CStr(ws.Range("BD" & linha).Value)
 
-        If secao = "" Or especie = "" Then GoTo ProximaLinha
+        If secao = "" Or especie = "" Then
+LimparAtributos:
+            For col = 26 To 43
+                ws.Cells(linha, col).Interior.Color = RGB(217, 217, 217)
+                ws.Cells(linha, col).ClearContents
+                ws.Cells(linha, col).Locked = True
+                On Error Resume Next
+                ws.Cells(linha, col).Validation.Delete
+                On Error GoTo 0
+            Next col
+            GoTo ProximaLinha
+        End If
         
         For col = 26 To ws.Cells(linha, Columns.Count).End(xlToLeft).Column
             If col > 43 Then Exit For
@@ -133,7 +142,7 @@ Sub AtualizarSecaoEspecie(Optional linhaUnica As Variant)
                         .ShowError = True
                     End With
                     
-                    ws.Cells(linha, col).Locked = False ' <-- ADICIONA AQUI
+                    ws.Cells(linha, col).Locked = False
                 Else
                     penultimoValor = CStr(wsDados.Cells(1, col).Value)
                     

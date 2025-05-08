@@ -138,7 +138,10 @@ Sub ConsultaFiliais()
             .Interior.Color = RGB(243, 243, 243)
             .HorizontalAlignment = xlCenter
             .VerticalAlignment = xlCenter
-            .Value = "Distribua aqui as quantidades relacionadas ao codigo " & i 
+            .WrapText = True ' Habilita a quebra de linha
+            .Value = "Distribua aqui as quantidades relacionadas ao codigo " & i & ". Somente numeros inteiros positivos com ate 5 digitos sao permitidos."
+            .Font.Name = "Arial"
+            .Font.Size = 8
 
             With .Borders
                 .LineStyle = xlContinuous
@@ -178,6 +181,168 @@ Sub ConsultaFiliais()
 
 
     Next i
+
+    ' Adicionar as colunas "Quantidade de Peças" e "Valor total" após a última coluna criada
+    Dim ultimaColuna As Long
+    ultimaColuna = fimBloco ' Usa a última coluna do último bloco criado
+
+    ' Coluna "Quantidade de Peças"
+    With ws.Cells(6, ultimaColuna + 1)
+        .Value = "Quantidade de Pcs"
+        .Interior.Color = RGB(198, 224, 180) ' Verde claro
+        .Font.Bold = True
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+        .ColumnWidth = 18
+        
+        With .Borders
+            .LineStyle = xlContinuous
+            .Color = RGB(217, 217, 217)
+            .Weight = xlThin
+        End With
+    End With
+
+    ' Coluna "Valor total"
+    With ws.Cells(6, ultimaColuna + 2)
+        .Value = "Valor total"
+        .Interior.Color = RGB(153, 193, 221) ' Azul claro
+        .Font.Bold = True
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+        .ColumnWidth = 15
+        
+        With .Borders
+            .LineStyle = xlContinuous
+            .Color = RGB(217, 217, 217)
+            .Weight = xlThin
+        End With
+    End With
+
+    ' Aplicar formatação às linhas de título (3 a 5) para as novas colunas
+    For i = 3 To 5
+        With ws.Cells(i, ultimaColuna + 1)
+            .Interior.Color = RGB(243, 243, 243)
+            .HorizontalAlignment = xlCenter
+            .VerticalAlignment = xlCenter
+            
+            With .Borders
+                .LineStyle = xlContinuous
+                .Color = RGB(217, 217, 217)
+                .Weight = xlThin
+            End With
+        End With
+        
+        With ws.Cells(i, ultimaColuna + 2)
+            .Interior.Color = RGB(243, 243, 243)
+            .HorizontalAlignment = xlCenter
+            .VerticalAlignment = xlCenter
+            
+            With .Borders
+                .LineStyle = xlContinuous
+                .Color = RGB(217, 217, 217)
+                .Weight = xlThin
+            End With
+        End With
+    Next i
+
+    ' Coluna "Quantidade de Peças"
+    With ws.Cells(6, ultimaColuna + 1)
+        .Value = "Quantidade de Pcs"
+        .Interior.Color = RGB(198, 224, 180) ' Verde claro
+        .Font.Bold = True
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+        .ColumnWidth = 18
+        
+        With .Borders
+            .LineStyle = xlContinuous
+            .Color = RGB(217, 217, 217)
+            .Weight = xlThin
+        End With
+    End With
+
+    ' Adicionar fórmula SUM para somar todas as colunas de filiais
+    Dim primeiraColunaFilial As Long
+    primeiraColunaFilial = 40 ' Coluna AN (ajuste conforme necessário)
+
+    ' A fórmula irá somar da primeira coluna de filial até a última coluna criada
+    ws.Range(ws.Cells(7, ultimaColuna + 1), ws.Cells(100, ultimaColuna + 1)).Formula = _
+        "=SUM(" & ws.Cells(7, primeiraColunaFilial).Address(False, False) & ":" & ws.Cells(7, ultimaColuna).Address(False, False) & ")"
+
+    ' Coluna "Valor total"
+    With ws.Cells(6, ultimaColuna + 2)
+        .Value = "Valor total"
+        .Interior.Color = RGB(153, 193, 221) ' Azul claro
+        .Font.Bold = True
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+        .ColumnWidth = 15
+        
+        With .Borders
+            .LineStyle = xlContinuous
+            .Color = RGB(217, 217, 217)
+            .Weight = xlThin
+        End With
+    End With
+
+    ' Adicionar fórmula para Valor Total que multiplica V:AE pelos intervalos correspondentes
+    Dim colValorTotal As Long
+    colValorTotal = ultimaColuna + 2 ' Coluna do Valor Total
+
+    ' Encontrar quantas filiais temos por grupo (countLocais)
+    Dim filiaisPorGrupo As Long
+    filiaisPorGrupo = countLocais ' Número de filiais retornadas da consulta SQL
+
+    ' Definir a primeira coluna do primeiro grupo (AN = coluna 40)
+    Dim primeiraColGrupo As Long
+    primeiraColGrupo = 40 ' AN
+
+    ' Aplicar a fórmula para cada linha (7 a 100)
+    For linha = 7 To 100
+        Dim formulaTotal As String
+        formulaTotal = ""
+        Dim colAtual As Long
+        colAtual = primeiraColGrupo
+        
+        ' Construir a fórmula para cada grupo (10 grupos máximo - V até AE)
+        For grupo = 1 To 10
+            Dim colMultiplicadora As Long
+            colMultiplicadora = 21 + grupo ' V=22, W=23, ..., AE=31
+            
+            ' Verificar se existe a coluna multiplicadora (não passar de AE)
+            If colMultiplicadora <= 31 Then
+                ' Calcular última coluna do grupo atual
+                Dim ultimaColGrupo As Long
+                ultimaColGrupo = colAtual + filiaisPorGrupo - 1
+                
+                ' Verificar se o grupo não ultrapassa a última coluna criada
+                If colAtual <= ultimaColuna Then
+                    If formulaTotal <> "" Then formulaTotal = formulaTotal & "+"
+                    
+                    ' Se for o último grupo, ajustar para não ultrapassar a última coluna
+                    If ultimaColGrupo > ultimaColuna Then
+                        ultimaColGrupo = ultimaColuna
+                    End If
+                    
+                    ' Adicionar parte da fórmula: V*SUM(AN:BC), W*SUM(BD:BS), etc.
+                    formulaTotal = formulaTotal & _
+                        ws.Cells(linha, colMultiplicadora).Address(False, False) & _
+                        "*SUM(" & ws.Cells(linha, colAtual).Address(False, False) & ":" & _
+                        ws.Cells(linha, ultimaColGrupo).Address(False, False) & ")"
+                    
+                    ' Preparar para o próximo grupo
+                    colAtual = ultimaColGrupo + 1
+                End If
+            End If
+        Next grupo
+        
+        ' Aplicar a fórmula completa na célula de Valor Total
+        If formulaTotal <> "" Then
+            ws.Cells(linha, colValorTotal).Formula = "=" & formulaTotal
+            ' Formatar como moeda (opcional)
+            ws.Cells(linha, colValorTotal).NumberFormat = """R$"" #,##0.00"
+        End If
+    Next linha
 
     Exit Sub
 

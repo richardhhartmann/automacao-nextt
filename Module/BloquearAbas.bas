@@ -70,6 +70,30 @@ Sub BloquearCadastroProdutos()
     ws.Protect password:="nexttsol", UserInterfaceOnly:=True
 End Sub
 
+Sub BloquearCadastroPedidos()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Cadastro de Pedidos")
+
+    ' Desproteger a planilha
+    On Error Resume Next
+    ws.Unprotect password:="nexttsol"
+    On Error GoTo 0
+
+    ' Desbloquear todas as células primeiro
+    ws.Cells.Locked = False
+
+    ' Bloquear os intervalos específicos
+    ws.Range("A1:XFD6").Locked = True
+
+    ' Configurar a proteção da planilha
+    ws.Protect password:="nexttsol", UserInterfaceOnly:=False, _
+                AllowFormattingCells:=False, AllowFormattingColumns:=False, _
+                AllowFormattingRows:=False, AllowInsertingColumns:=False, _
+                AllowInsertingRows:=False, AllowInsertingHyperlinks:=False, _
+                AllowDeletingColumns:=False, AllowDeletingRows:=False, _
+                AllowSorting:=False, AllowFiltering:=False, AllowUsingPivotTables:=False
+End Sub
+
 Sub BloquearCadastroMarcas()
     Dim ws As Worksheet
     Set ws = ThisWorkbook.Sheets("Cadastro de Marcas")

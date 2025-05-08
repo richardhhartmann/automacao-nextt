@@ -250,9 +250,9 @@ def importar_modulo_vba(caminho_arquivo, modulos_vba, pasta_modulos):
             progresso.update(1)
             
             try:
-                debug_print("Executando a macro CriarIntervalosNomeadosB...")
-                excel.Application.Run("CriarIntervalosNomeadosB")
-                debug_print("Macro 'CriarIntervalosNomeadosB' executada com sucesso!")
+                debug_print("Executando a macro CriarIntervalosNomeados...")
+                excel.Application.Run("CriarIntervalosNomeados.CriarIntervalosNomeados")
+                debug_print("Macro 'CriarIntervalosNomeados' executada com sucesso!")
 
                 caminho_autoexec = os.path.join(pasta_modulos, "AutoExec.bas")
                 if os.path.exists(caminho_autoexec):

@@ -38,6 +38,7 @@ Sub cadastro_de_marcas()
     objShell.Run comando, 1, True
     
     Set objShell = Nothing
+    ws.Range("A7:A1007").ClearContents
     Call AtualizarDadosConsolidados
 End Sub
 
@@ -65,4 +66,3 @@ Function GetPythonPath() As String
     Set objExec = Nothing
     Set objShell = Nothing
 End Function
-

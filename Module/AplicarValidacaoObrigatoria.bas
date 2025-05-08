@@ -1,6 +1,6 @@
 Attribute VB_Name = "AplicarValidacaoObrigatoria"
 Sub AplicarValidacaoObrigatoria()
-    Dim ws As Worksheet, wsDados As Worksheet, wsPedido As Worksheet, wsDadosPedido As Worksheet
+    Dim ws As Worksheet, wsDados As Worksheet, wsPedido As Worksheet, wsDadosPedido As Worksheet, wsSecao As Worksheet, wsEspecie As Worksheet
     Dim ultimaColuna As Integer, linhaObrigatorio As Integer
     Dim linhaInicioValidacao As Integer, linhaFimValidacao As Integer
     Dim coluna As Integer, col As Long
@@ -40,7 +40,21 @@ Sub AplicarValidacaoObrigatoria()
         Exit Sub
     End If
     Set wsPedido = ThisWorkbook.Sheets("Cadastro de Pedidos")
+
+    ' Verificar se a planilha de cadastro de secao existe
+    If Not WorksheetExists("Cadastro de Secao") Then
+        MsgBox "Planilha 'Cadastro de Secao' nao encontrada!", vbCritical
+        Exit Sub
+    End If
+    Set wsSecao = ThisWorkbook.Sheets("Cadastro de Secao")
     
+    ' Verificar se a planilha de cadastro de especie existe
+    If Not WorksheetExists("Cadastro de Especie") Then
+        MsgBox "Planilha 'Cadastro de Especie' nao encontrada!", vbCritical
+        Exit Sub
+    End If
+    Set wsEspecie = ThisWorkbook.Sheets("Cadastro de Especie")
+
     ' ========= DESPROTEGER PLANILHAS =========
     On Error Resume Next ' Caso alguma planilha nao esteja protegida
     ws.Unprotect senha
@@ -83,12 +97,12 @@ Sub AplicarValidacaoObrigatoria()
     ApplySimpleValidation ws.Range("G7:G1007"), _
                         "=AND(ISNUMBER(G7),LEN(G7)<=50)", _
                         "Valor invalido", _
-                        "Somente números com até 50 dígitos sao permitidos."
+                        "Somente numeros com ate 50 digitos sao permitidos."
 
     ApplySimpleValidation wsPedido.Range("A7:A1007"), _
                         "=AND(ISNUMBER(A7),LEN(A7)<=50)", _
                         "Valor invalido", _
-                        "Somente números com até 50 dígitos sao permitidos."
+                        "Somente numeros com ate 50 digitos sao permitidos."
 
     ApplySimpleValidation wsPedido.Range("I7:I1007"), _
                          "=LEN(I7)<=1000", _
@@ -96,9 +110,9 @@ Sub AplicarValidacaoObrigatoria()
                          "Maximo de 1000 caracteres permitidos."
     
     ApplySimpleValidation wsPedido.Range("L7:U1007"), _
-                          "=AND(ISNUMBER(L7),LEN(L7)<=9)", _
-                          "Valor invalido", _
-                          "Somente números com até 9 dígitos sao permitidos."
+                     "=AND(ISNUMBER(L7), LEN(L7)=9, INT(L7)=L7)", _
+                     "Codigo invalido", _
+                     "O codigo de produto deve conter exatamente 9 digitos e ser um numero inteiro."
 
 
     ' Validacao de EAN
@@ -140,6 +154,12 @@ Sub AplicarValidacaoObrigatoria()
                          "Limite de Caracteres", _
                          "Maximo de 50 caracteres permitidos."
     
+    ' Validao de fator filial
+    ApplySimpleValidation wsPedido.Range("AN7:ZZ7"), _
+                        "=AND(ISNUMBER(AN7), AN7=INT(AN7), LEN(AN7)<=5, AN7>=0)", _
+                        "Valor inválido", _
+                        "Somente numeros inteiros positivos com ate 5 digitos sao permitidos."
+    
     
     ' ========= LISTAS SUSPENSAS =========
     
@@ -151,6 +171,9 @@ Sub AplicarValidacaoObrigatoria()
     ApplyDropdown ws, wsDados, "K7:K1007", "K1:K100700"
     ApplyDropdown ws, wsDados, "L7:L1007", "L1:L100700"
     ApplyDropdown ws, wsDados, "P7:P1007", "P1:P100700"
+    
+    ApplyDropdown wsSecao, wsDados, "B7:B1007", "AR1:AR100700"
+    ApplyDropdown wsEspecie, wsDados, "B7:B1007", "AV1:AV100700"
     
     ApplyDropdown wsPedido, wsDadosPedido, "B7:B1007", "B1:B100700"
     ApplyDropdown wsPedido, wsDadosPedido, "C7:C1007", "C1:C100700"

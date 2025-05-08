@@ -40,7 +40,7 @@ Sub AtualizarDadosConsolidados()
     conn.Close
     Set conn = Nothing
     
-    Call CriarIntervalosNomeadosB
+    Call CriarIntervalosNomeados.CriarIntervalosNomeados
     Unload frmAguarde
     Debug.Print "Tempo total de execucao: " & Round(Timer - startTime, 2) & " segundos"
 End Sub
@@ -171,7 +171,7 @@ Private Sub ExecutarAtualizacoes(conn As Object, ws As Worksheet)
     AtualizarColuna conn, ws, "SELECT CAST(etq_codigo AS VARCHAR) + ' - ' + etq_descricao AS descricao_completa FROM tb_etiqueta", Array(16) ' Coluna P
 
     ' Referencia Descricao
-    AtualizarColuna conn, ws, "SELECT prd_referencia_fornec FROM tb_produto", Array(47) ' Coluna AU
+    AtualizarColuna conn, ws, "SELECT sec_codigo, esp_codigo, prd_referencia_fornec FROM tb_produto", Array(52, 53, 54)
 
     ' SECAO-ESPECIE
     AtualizarColuna conn, ws, "SELECT sec_codigo FROM tb_especie", Array(51) ' Coluna AY

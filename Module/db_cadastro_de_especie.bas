@@ -39,7 +39,7 @@ Sub cadastro_de_especie()
     
     Set objShell = Nothing
     Call AtualizarDadosConsolidados
-    Call CriarIntervalosNomeadosB
+    Call CriarIntervalosNomeados.CriarIntervalosNomeados
 End Sub
 
 Function GetPythonPath() As String

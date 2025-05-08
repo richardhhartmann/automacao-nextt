@@ -40,7 +40,7 @@ Sub AtualizarDadosPedido()
     conn.Close
     Set conn = Nothing
     
-    Call CriarIntervalosNomeadosB
+    Call CriarIntervalosNomeados.CriarIntervalosNomeados
     Unload frmAguarde
     Debug.Print "Tempo total de execucao: " & Round(Timer - startTime, 2) & " segundos"
 End Sub

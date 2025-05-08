@@ -21,11 +21,15 @@ Private Sub Workbook_Open()
             Call BloquearTodasAbas.BloquearTodasAbas
             Call BloquearTodasAbas.BloquearCadastroProdutos
             Call BloquearTodasAbas.BloquearCadastroMarcas
+            'Call BloquearTodasAbas.BloquearCadastroPedidos
             Call OcultarAbasProtegidas.OcultarAbasProtegidas
             Call CriarShapeBotao.CriarShapeBotao
+            Call CriarShapeBotao.CriarShapeBotaoCadastroPedidos
             Call AplicarValidacaoObrigatoria.AplicarValidacaoObrigatoria
             Call AplicarValidacaoObrigatoria.VerificarEDefinirDropDowns
             Call ConsultaFiliais.ConsultaFiliais
+            Call Formatacao.Formatacao
+            Call OcultarColunasANaXFD_Comprovado.OcultarColunasANaXFD_Comprovado
         
             Application.EnableEvents = False
             With ThisWorkbook.Sheets("Nextt").Range("O3")
@@ -43,6 +47,13 @@ Private Sub Workbook_Open()
 
         Else
             Call AtualizarInterface.AtualizarInterface
+
+            response = MsgBox("Deseja executar o monitoramento do banco de dados em tempo real?", vbQuestion + vbYesNo, "Monitoramento em Tempo Real")
+            
+            If response = vbYes Then
+                Call CheckDB.StartDBMonitoring
+            End If
+            
         End If
 
         ' Remove imagens antigas
@@ -50,19 +61,27 @@ Private Sub Workbook_Open()
             If shp.Name = "BrandImage" Or shp.Name = "UploadImage" Or shp.Name = "RefreshImage" Then shp.Delete
         Next shp
 
-        ' Adiciona BrandImage
+        ' Adiciona BrandImage com hyperlink
         If Dir(brandPath) <> "" Then
             .Unprotect password:="nexttsol"
-            With .Shapes.AddPicture(brandPath, msoFalse, msoTrue, .Range("B2").Left, .Range("B2").Top - 5, -1, -1)
+            
+            ' Adiciona a imagem
+            Dim img As Shape
+            Set img = .Shapes.AddPicture(brandPath, msoFalse, msoTrue, .Range("B2").Left, .Range("B2").Top - 5, -1, -1)
+            
+            With img
                 .Name = "BrandImage"
                 .LockAspectRatio = msoTrue
                 .Width = 90
+                
+                ' Atribui macro de hyperlink
+                .OnAction = "AbrirLinkBrand"
             End With
+            
             .Protect password:="nexttsol", UserInterfaceOnly:=True
         Else
-            MsgBox "A imagem 'brand.png' nao foi encontrada em: " & brandPath
+            MsgBox "A imagem 'brand.png' não foi encontrada em: " & brandPath
         End If
-
         ' Upload Image
         If Dir(uploadPath) <> "" Then
             With .Shapes.AddPicture(uploadPath, msoFalse, msoTrue, .Range("I10").Left, .Range("I10").Top - 12, -1, -1)
@@ -73,12 +92,16 @@ Private Sub Workbook_Open()
 
         ' Refresh Image
         If Dir(refreshPath) <> "" Then
+            .Columns("Q:XFD").EntireColumn.Hidden = False ' Revela as colunas ocultas
+
             With .Shapes.AddPicture(refreshPath, msoFalse, msoTrue, .Range("N3").Left + 15, .Range("N3").Top, -1, -1)
                 .Name = "RefreshImage"
                 .LockAspectRatio = msoTrue
                 .Width = 20
                 .OnAction = "AtualizarInterface.AtualizarInterface"
             End With
+
+            .Columns("Q:XFD").EntireColumn.Hidden = True ' Oculta novamente após inserir
         End If
     End With
 End Sub
@@ -90,3 +113,4 @@ Private Sub Workbook_BeforeClose(Cancel As Boolean)
         Set dbListener = Nothing
     End If
 End Sub
+

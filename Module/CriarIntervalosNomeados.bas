@@ -1,4 +1,5 @@
-Sub CriarIntervalosNomeadosB()
+Attribute VB_Name="CriarIntervalosNomeados"
+Sub CriarIntervalosNomeados()
     Dim ws As Worksheet
     Dim ultimaLinha As Long, i As Long
     Dim secAtual As Integer, primeiraLinha As Long
