@@ -249,26 +249,27 @@ def verificar_duplicados(cursor, referencias_marcas):
     return duplicados
 
 def cadastrar_produto():
+    global caminho_arquivo_produto
     debug_log("Iniciando processo de cadastro de produto")
     start_total = time.time()
     
-    caminho_arquivo = selecionar_arquivo()
-    if not caminho_arquivo:
+    caminho_arquivo_produto = selecionar_arquivo()
+    if not caminho_arquivo_produto:
         return
 
     try:
         debug_log("Carregando arquivo Excel")
-        wb = openpyxl.load_workbook(caminho_arquivo, data_only=True)
+        wb = openpyxl.load_workbook(caminho_arquivo_produto, data_only=True)
         
         if "Cadastro de Produtos" not in wb.sheetnames or "Cadastro de Pedidos" not in wb.sheetnames:
             debug_log("Abas 'Cadastro de Produtos' ou 'Cadastro de Pedidos' não encontradas")
             wb.close()
-            importacao(caminho_arquivo)
+            importacao(caminho_arquivo_produto)
             return
             
         ws = wb["Cadastro de Produtos"]
         
-        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Produtos", skiprows=6, header=None)
+        df = pd.read_excel(caminho_arquivo_produto, sheet_name="Cadastro de Produtos", skiprows=6, header=None)
 
         df = df.dropna(how='all')
         
@@ -434,14 +435,14 @@ def cadastrar_pedido():
     debug_log("Iniciando processo de cadastro de pedido")
     start_total = time.time()
     
-    caminho_arquivo = selecionar_arquivo()
-    if not caminho_arquivo:
+    caminho_arquivo_pedido = caminho_arquivo_produto
+    if not caminho_arquivo_pedido:
         return []
 
     try:
         # 1. Processa o arquivo Excel
         debug_log("Carregando arquivo Excel")
-        df = pd.read_excel(caminho_arquivo, sheet_name="Cadastro de Pedidos", skiprows=6, header=None)
+        df = pd.read_excel(caminho_arquivo_pedido, sheet_name="Cadastro de Pedidos", skiprows=6, header=None)
         df = df.dropna(how='all')
         
         if df.empty:

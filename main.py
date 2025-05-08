@@ -10,7 +10,17 @@ from tkinter import font, Toplevel, ttk, filedialog
 from PIL import Image, ImageTk
 from Auto.db_connection import preencher_planilha
 from Auto.db_module import importar_modulo_vba
-from cadastros_auto_nextt import cadastrar_produto
+from cadastros_auto_nextt import cadastrar_produto, cadastrar_pedido
+cancelar_evento = threading.Event()
+
+def cancelar_processamento():
+    """Sinaliza o cancelamento do processo em execução."""
+    global cancelar_evento
+    if messagebox.askyesno("Cancelar", "Tem certeza que deseja cancelar o processo?"):
+        cancelar_evento.set()
+        fechar_janela_carregamento()
+        label_status.config(text="Processo cancelado pelo usuário.", fg="orange")
+
 
 def baixar_planilha():
     """Salva localmente o modelo da planilha se estiver em modo importação."""
@@ -186,37 +196,43 @@ def atualizar_status(mensagem):
     root.update() 
 
 def mostrar_janela_carregamento():
-    """Cria e exibe a janela de carregamento com animação de texto."""
-    global loading_window, label_loading, animando, text_output, output_redirector
-    animando = True 
-    
+    """Cria e exibe a janela de carregamento com animação de texto e botão de cancelamento."""
+    global loading_window, label_loading, animando, output_redirector, cancelar_evento
+    animando = True
+    cancelar_evento.clear()
+
     loading_window = Toplevel(root)
     loading_window.title("Processando...")
-    loading_window.geometry("400x200")
+    loading_window.geometry("300x200")
     loading_window.resizable(False, False)
-    
-    label_loading = tk.Label(loading_window, text="Processando... Aguarde.", font=("Arial", 12))
-    label_loading.pack(pady=10)
-    
-    text_output = tk.Text(loading_window, width=45, height=6, wrap=tk.WORD, font=("Arial", 10))
-    text_output.pack(pady=10)
 
-    output_redirector = OutputRedirector(text_output)
-    sys.stdout = output_redirector
-    
-    threading.Thread(target=atualizar_texto_carregamento).start()
+    label_loading = tk.Label(loading_window, text="Extraindo Dados...", font=("Arial", 12))
+    label_loading.pack(pady=10)
+
+    # Ícone ou animação pode ser colocada aqui (opcional)
+    progress_bar = ttk.Progressbar(loading_window, mode='indeterminate', length=250)
+    progress_bar.pack(pady=(20, 10))
+    progress_bar.start(15)
+
+    # Botão de Cancelar
+    botao_cancelar = ttk.Button(loading_window, text="Cancelar", command=cancelar_processamento)
+    botao_cancelar.pack(pady=(5, 10))
+    botao_cancelar.config(width=20)
+
+    threading.Thread(target=atualizar_texto_carregamento, daemon=True).start()
+
 
 def atualizar_texto_carregamento():
     """Atualiza o texto da janela de carregamento com animação de pontinhos."""
-    global nome_empresa
-    while animando:
-        try:
-            texto = f"Extraindo Dados {nome_empresa}..." if 'nome_empresa' in globals() else "Extraindo Dados..."
-            label_loading.config(text=texto)
-        except:
-            label_loading.config(text="Extraindo Dados...")
+    pontos = ""
+    while animando and not cancelar_evento.is_set():
+        pontos += "."
+        if len(pontos) > 3:
+            pontos = ""
+        texto = f"Extraindo Dados {nome_empresa}{pontos}" if 'nome_empresa' in globals() else f"Extraindo Dados{pontos}"
+        label_loading.config(text=texto)
         time.sleep(0.5)
-        loading_window.after(0, loading_window.update)
+
 
 
 def fechar_janela_carregamento():
@@ -237,33 +253,40 @@ def bloquear_campos(bloquear):
 
 def main():
     root.iconify()
-
+    
+    if cancelar_evento.is_set(): return
     print("Preenchendo planilha...")
-    preencher_planilha(caminho_arquivo)
-    
-    print("Planilha preenchida com sucesso.") 
+    preencher_planilha(caminho_arquivo, cancelar_evento)
+
+    if cancelar_evento.is_set(): return
+    print("Planilha preenchida com sucesso.")
     importar_modulo_vba(caminho_novo_arquivo, modulos_vba, pasta_modulos)
-    
-    print("VBA importado com sucesso.")  
+
+    if cancelar_evento.is_set(): return
+    print("VBA importado com sucesso.")
     print("Processo concluído com sucesso.")
     
     fechar_janela_carregamento()
-
     bloquear_campos(False)
 
 def importar():
     if not validar_campos():
         return
-    
+
     mostrar_janela_carregamento()
-    
+
     def executar_cadastro():
         try:
+            if cancelar_evento.is_set():
+                print("Operação cancelada antes do início.")
+                return
             cadastrar_produto()
+            cadastrar_pedido()
         finally:
             loading_window.after(0, fechar_janela_carregamento)
-    
+
     threading.Thread(target=executar_cadastro, daemon=True).start()
+
 
 def preencher_campos_com_parametros_salvos():
     """Preenche os campos da interface com os últimos valores salvos no arquivo de conexão."""
@@ -279,7 +302,7 @@ def preencher_campos_com_parametros_salvos():
 
         entry_server.delete(0, tk.END)
         entry_server.insert(0, dados.get("server", ""))
-        atualizar_bancos_disponiveis()
+        entry_server.bind("<FocusOut>", atualizar_bancos_disponiveis)
 
         entry_database.delete(0, tk.END)
         entry_database.insert(0, dados.get("database", ""))
@@ -352,7 +375,7 @@ def atualizar_bancos_disponiveis(event=None):
 
 root = tk.Tk()
 root.title("Conexão Banco de Dados")
-root.geometry("400x550")
+root.geometry("400x525")
 root.resizable(False, False)
 
 root.columnconfigure(0, weight=1)
@@ -383,7 +406,7 @@ entry_driver.insert(0, f"{driver_mais_recente}")
 tk.Label(root, text="Servidor:").grid(row=3, column=0, padx=10, pady=5, sticky="e")
 entry_server = tk.Entry(root, width=30)
 entry_server.grid(row=3, column=1, padx=10, pady=5, sticky="w")
-btn_refresh_bancos = tk.Button(root, text="Atualizar Bancos", command=atualizar_bancos_disponiveis)
+#btn_refresh_bancos = tk.Button(root, text="Atualizar Bancos", command=atualizar_bancos_disponiveis)
 
 var_importacao = tk.BooleanVar()
 
@@ -394,14 +417,14 @@ def alternar_modo_importacao():
         entry.config(state=estado)
     checkbutton_trusted_connection.config(state=estado)
     btn_importar.config(state=estado)
-    btn_refresh_bancos.config(state=estado)
+    #btn_refresh_bancos.config(state=estado)
 
 checkbutton_importacao = tk.Checkbutton(
     root, text="Modo Importação (Offline)", variable=var_importacao, command=alternar_modo_importacao
 )
 checkbutton_importacao.grid(row=10, column=0, columnspan=2, pady=(5, 0))
 
-btn_refresh_bancos.grid(row=9, column=1, padx=(5, 10), pady=5, sticky="w")
+#btn_refresh_bancos.grid(row=9, column=1, padx=(5, 10), pady=5, sticky="w")
 
 tk.Label(root, text="Banco de Dados:").grid(row=4, column=0, padx=10, pady=5, sticky="e")
 entry_database = ttk.Combobox(root, width=27, state="readonly")
