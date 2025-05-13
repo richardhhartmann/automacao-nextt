@@ -262,10 +262,12 @@ def cadastrar_produto():
         wb = openpyxl.load_workbook(caminho_arquivo_produto, data_only=True)
         
         if "Cadastro de Produtos" not in wb.sheetnames or "Cadastro de Pedidos" not in wb.sheetnames:
+            from main import exportar_conexao
             debug_log("Abas 'Cadastro de Produtos' ou 'Cadastro de Pedidos' não encontradas")
-            wb.close()
             importacao(caminho_arquivo_produto)
-            return
+            exportar_conexao()
+        else:
+            print("oie")
             
         ws = wb["Cadastro de Produtos"]
         
@@ -440,7 +442,6 @@ def cadastrar_pedido():
         return []
 
     try:
-        # 1. Processa o arquivo Excel
         debug_log("Carregando arquivo Excel")
         df = pd.read_excel(caminho_arquivo_pedido, sheet_name="Cadastro de Pedidos", skiprows=6, header=None)
         df = df.dropna(how='all')
@@ -449,40 +450,32 @@ def cadastrar_pedido():
             debug_log("Nenhum dado válido encontrado")
             return []
 
-        # Obtém número real de colunas
         num_colunas = df.shape[1]
 
-        # Lista base de nomes de colunas
         nomes_colunas = [
             "cod_original", "fornecedor", "comprador", "dt_entrega_inicial", "dt_entrega_final",
             "condicao_pagamento", "qualidade", "parcelas", "observacao", "formas_pagamento",
             "atributo"
         ]
         
-        # Adiciona colunas dinâmicas
-        nomes_colunas += [f"cod{i}" for i in range(10)]  # cod0 a cod9
-        nomes_colunas += [f"pag{i}" for i in range(10)]  # pag0 a pag9
+        nomes_colunas += [f"cod{i}" for i in range(10)]
+        nomes_colunas += [f"pag{i}" for i in range(10)]
         
-        # Adiciona colunas extras, pulando a 703
         coluna_atual = 32
         while len(nomes_colunas) < num_colunas:
-            if coluna_atual != 703:  # Pula a coluna 703 como solicitado
+            if coluna_atual != 703:
                 nomes_colunas.append(f"coluna{coluna_atual}")
             coluna_atual += 1
 
-        # Verifica e ajusta o tamanho da lista de nomes
         if len(nomes_colunas) > num_colunas:
             nomes_colunas = nomes_colunas[:num_colunas]
         elif len(nomes_colunas) < num_colunas:
             nomes_colunas += [f"extra_{i}" for i in range(num_colunas - len(nomes_colunas))]
         
-        # Atribui os nomes das colunas
         df.columns = nomes_colunas
 
-        # Filtra apenas linhas com código original válido
         df = df[df['fornecedor'].notna() & (df['fornecedor'] != 0)]
         
-        # Converte colunas numéricas
         colunas_numericas = ['cod_original'] + \
                            [f"coluna{i}" for i in [705, 706, 707, 708] if f"coluna{i}" in df.columns] + \
                            [f"cod{i}" for i in range(10)] + \
@@ -492,13 +485,11 @@ def cadastrar_pedido():
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype('int32')
 
-        # Formata as colunas de data para incluir horas, minutos, segundos e milissegundos
         for col_data in ['dt_entrega_inicial', 'dt_entrega_final']:
             if col_data in df.columns:
                 df[col_data] = pd.to_datetime(df[col_data], errors='coerce')
                 df[col_data] = df[col_data].dt.strftime('%Y-%m-%d %H:%M:%S')
 
-        # Processa os pedidos válidos
         pedidos = []
         for _, row in df.iterrows():
             pedido = {
@@ -523,29 +514,24 @@ def cadastrar_pedido():
         
         with get_db_connection('conexao_temp.txt') as (conn, cursor):
             try:
-                # Obtém o próximo ped_codigo
                 cursor.execute("SELECT ISNULL(MAX(ped_codigo), 0) + 1 FROM tb_pedido")
                 proximo_codigo = cursor.fetchone()[0]
 
-                # Processa e insere os pedidos
                 pedidos_inseridos = 0
                 for _, row in df.iterrows():
                     if pd.notna(row['fornecedor']) and row['fornecedor'] != 0:
                         try:
-                            # Função auxiliar para converter datas
                             def format_sql_date(date_str):
                                 try:
                                     dt = pd.to_datetime(date_str, errors='coerce')
                                     return dt.strftime('%Y-%m-%d %H:%M:%S') if not pd.isna(dt) else None
                                 except:
                                     return None
-                            # Data atual para campos de timestamp
                             data_atual = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
                             fornecedor = str(df.iloc[_, 702]).strip()
                             comprador = str(df.iloc[_, 703])[:50] if pd.notna(df.iloc[_, 703]) else None
 
-                            # Conversão segura das datas de entrega
                             data_entrega_inicial = format_sql_date(row['dt_entrega_inicial'])
                             data_entrega_final = format_sql_date(row['dt_entrega_final'])
 
@@ -553,8 +539,6 @@ def cadastrar_pedido():
                                 cpg_codigo = int(float(row.get('condicao_pagamento', 0)))
                             except (ValueError, TypeError):
                                 cpg_codigo = None
-
-                            # Monta o INSERT
 
                             cursor.execute("""SELECT COUNT(*) 
                     FROM INFORMATION_SCHEMA.COLUMNS 
@@ -582,7 +566,7 @@ def cadastrar_pedido():
                                     fornecedor,
                                     comprador,
                                     data_atual,
-                                    data_entrega_inicial if data_entrega_inicial else None,  # Garante NULL se data inválida
+                                    data_entrega_inicial if data_entrega_inicial else None,
                                     data_entrega_final if data_entrega_final else None,
                                     'D',  # Status Digitado
                                     str(row['observacao']).strip()[:50] if pd.notna(row['observacao']) else None,
@@ -617,7 +601,7 @@ def cadastrar_pedido():
                                     fornecedor,
                                     comprador,
                                     data_atual,
-                                    data_entrega_inicial if data_entrega_inicial else None,  # Garante NULL se data inválida
+                                    data_entrega_inicial if data_entrega_inicial else None,
                                     data_entrega_final if data_entrega_final else None,
                                     'D',  # Status Digitado
                                     str(row['observacao']).strip()[:50] if pd.notna(row['observacao']) else None,
@@ -634,7 +618,6 @@ def cadastrar_pedido():
                                     data_atual
                                 )
 
-                            # Debug dos parâmetros antes da inserção
                             debug_log(f"Parâmetros lidos: {params}")
 
                             cursor.execute(sql, params)
@@ -645,7 +628,6 @@ def cadastrar_pedido():
                             debug_log(f"Pedido {pedido_atual} cadastrado com sucesso!")
 
                             formas_de_pagamento = []
-                            # A coluna AAF é a coluna 708 (1-based index)
                             coluna_inicial_pagamentos = 708 - 1  # Convertendo para 0-based index do pandas
 
                             if df.shape[1] > coluna_inicial_pagamentos:
@@ -657,15 +639,12 @@ def cadastrar_pedido():
                                         except (ValueError, TypeError):
                                             continue
 
-                            # Converte para string separada por vírgulas ou None se vazio
                             formas_de_pagamento = ','.join(map(str, formas_de_pagamento)) if formas_de_pagamento else None
 
                             if formas_de_pagamento:
                                 try:
-                                    # Primeiro remove quaisquer formas de pagamento existentes
                                     cursor.execute("DELETE FROM tb_pedido_tipo_documento WHERE ped_codigo = ?", (pedido_atual,))
                                     
-                                    # Insere cada forma de pagamento
                                     for tid_codigo in formas_de_pagamento.split(','):
                                         cursor.execute("""
                                             INSERT INTO tb_pedido_tipo_documento(ped_codigo, tid_codigo) 
@@ -678,13 +657,11 @@ def cadastrar_pedido():
                                     conn.rollback()
                                     debug_log(f"Erro ao inserir formas de pagamento para pedido {pedido_atual}: {str(e)}")
 
-                            # Primeiro obtemos todas as filiais em ordem
                             with get_db_connection('conexao_temp.txt') as (conn, cursor):
                                 cursor.execute("SELECT fil_codigo FROM tb_filial ORDER BY fil_codigo")
                                 filiais = [row[0] for row in cursor.fetchall()]
                                 debug_log(f"Encontradas {len(filiais)} filiais no sistema")
 
-                            # Processa os códigos de produto (colunas cod0 a cod9)
                             for i in range(10):
                                 cod_col = f"cod{i}"
                                 pag_col = f"pag{i}"
@@ -696,13 +673,10 @@ def cadastrar_pedido():
                                         esp_codigo = int(codigo[3:5])
                                         prd_codigo = int(codigo[5:9])
                                         
-                                        # Obtém o valor de custo correspondente
                                         valor_custo = float(row[pag_col]) if pag_col in row and pd.notna(row[pag_col]) else 0
                                         
-                                        # Calcula a coluna inicial para este produto (AN = coluna 40)
                                         coluna_inicial_filial = 39 + (i * len(filiais))
                                         
-                                        # Para cada filial, criamos um registro com seu respectivo fator
                                         for filial_idx, fil_codigo in enumerate(filiais):
                                             coluna_fator = coluna_inicial_filial + filial_idx
                                             
@@ -713,7 +687,6 @@ def cadastrar_pedido():
                                                 except (ValueError, TypeError):
                                                     fator_filial = 0
                                             
-                                            # Insere na tb_pedido_produto (apenas na primeira filial)
                                             if filial_idx == 0:
                                                 cursor.execute("""
                                                     INSERT INTO tb_pedido_produto(
@@ -730,7 +703,6 @@ def cadastrar_pedido():
                                                     1, 10, valor_custo)
                                                 )
                                             
-                                            # Insere na tb_item_pedido para cada filial
                                             cursor.execute("""
                                                 INSERT INTO tb_item_pedido(
                                                     ped_codigo, sec_codigo, esp_codigo, prd_codigo, 
@@ -776,6 +748,3 @@ def cadastrar_pedido():
         return 0
     finally:
         debug_log(f"Tempo total: {time.time() - start_total:.2f}s")
-
-if __name__ == "__main__":
-    cadastrar_pedido()

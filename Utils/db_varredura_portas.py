@@ -1,10 +1,8 @@
 import socket
 import csv
 
-# Constante da subnet
 SUBNET = "172.22.2."
 
-# Mapeamento de serviços e suas portas
 PORTAS_SERVICOS = {
     1: ("RDP", 3389),
     2: ("HTTP", 80),

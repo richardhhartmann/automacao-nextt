@@ -145,10 +145,8 @@ def importacao(caminho):
         else:
             print("A aba 'Cadastro de Especie' não foi encontrada.")
 
-        # Finalizando conexão
         cursor.close()
         conn.close()
-
 
     except Exception as e:
         print("Erro ao acessar o banco de dados:", e)

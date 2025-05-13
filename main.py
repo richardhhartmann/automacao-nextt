@@ -13,8 +13,9 @@ from Auto.db_module import importar_modulo_vba
 from cadastros_auto_nextt import cadastrar_produto, cadastrar_pedido
 cancelar_evento = threading.Event()
 
+VERSAO = '1.0'
+
 def cancelar_processamento():
-    """Sinaliza o cancelamento do processo em execução."""
     global cancelar_evento
     if messagebox.askyesno("Cancelar", "Tem certeza que deseja cancelar o processo?"):
         cancelar_evento.set()
@@ -23,7 +24,6 @@ def cancelar_processamento():
 
 
 def baixar_planilha():
-    """Salva localmente o modelo da planilha se estiver em modo importação."""
     if var_importacao.get():
         origem = os.path.abspath("offline/Cadastros Auto Nextt.xlsm")
         if not os.path.exists(origem):
@@ -44,7 +44,6 @@ def baixar_planilha():
                 label_status.config(text=f"Erro ao salvar: {e}", fg="red")
                 return
 
-        # Após exportar, desmarcar o checkbox e reativar campos
         var_importacao.set(False)
         alternar_modo_importacao()
     else:
@@ -52,7 +51,6 @@ def baixar_planilha():
 
 
 def resource_path(relative_path):
-    """ Retorna o caminho absoluto para recursos, tanto para desenvolvimento quanto para o executável """
     try:
         base_path = sys._MEIPASS
     except Exception:
@@ -64,7 +62,6 @@ caminho_parametros = resource_path('conexao_temp.txt')
 pasta_modulos = resource_path('Module')
 
 def validar_campos():
-    """Verifica se os campos obrigatórios estão preenchidos."""
     driver = entry_driver.get().strip()
     server = entry_server.get().strip()
     database = entry_database.get().strip()
@@ -80,16 +77,14 @@ if sql_server_drivers:
     print(f"Driver selecionado: {driver_mais_recente}")
 
 def exportar_conexao():
-    """Exporta a conexão se os campos forem válidos."""
     if not validar_campos():
         return
     
     bloquear_campos(True)
     mostrar_janela_carregamento()
 
-    global nome_empresa  # Adicione esta linha
+    global nome_empresa
 
-    # Coleta os dados da interface
     dados_conexao = {
         "driver": driver_mais_recente,
         "server": entry_server.get().strip(),
@@ -100,7 +95,6 @@ def exportar_conexao():
     }
     
     try:
-        # Salva os dados no arquivo
         with open(caminho_parametros, 'w') as f:
             json.dump(dados_conexao, f, indent=4)
         
@@ -116,7 +110,6 @@ def exportar_conexao():
         label_status.config(text=f"Erro ao salvar: {str(e)}", fg="red")
 
 def processar_apos_exportacao():
-    """Função chamada após salvar os parâmetros para ler o arquivo e continuar o processamento."""
     try:
         main()
     except Exception as e:
@@ -125,7 +118,6 @@ def processar_apos_exportacao():
 
 
 def carregar_parametros_conexao_arquivo():
-    """Carrega os parâmetros de conexão do arquivo 'conexao_temp.txt'."""
     if not os.path.exists(caminho_parametros):
         raise FileNotFoundError(f"Arquivo de conexão não encontrado: {caminho_parametros}")
 
@@ -133,7 +125,6 @@ def carregar_parametros_conexao_arquivo():
         return json.load(f)
 
 def obter_nome_empresa():
-    """Obtém o nome da empresa do banco de dados usando os parâmetros do arquivo de conexão 'conexao_temp.txt'."""
     try:
         parametros = carregar_parametros_conexao_arquivo()
         
@@ -191,12 +182,10 @@ class OutputRedirector:
 
 
 def atualizar_status(mensagem):
-    """Atualiza o texto da label de status com a mensagem passada."""
     label_status.config(text=mensagem)
     root.update() 
 
 def mostrar_janela_carregamento():
-    """Cria e exibe a janela de carregamento com animação de texto e botão de cancelamento."""
     global loading_window, label_loading, animando, output_redirector, cancelar_evento
     animando = True
     cancelar_evento.clear()
@@ -209,12 +198,10 @@ def mostrar_janela_carregamento():
     label_loading = tk.Label(loading_window, text="Extraindo Dados...", font=("Arial", 12))
     label_loading.pack(pady=10)
 
-    # Ícone ou animação pode ser colocada aqui (opcional)
     progress_bar = ttk.Progressbar(loading_window, mode='indeterminate', length=250)
     progress_bar.pack(pady=(20, 10))
     progress_bar.start(15)
 
-    # Botão de Cancelar
     botao_cancelar = ttk.Button(loading_window, text="Cancelar", command=cancelar_processamento)
     botao_cancelar.pack(pady=(5, 10))
     botao_cancelar.config(width=20)
@@ -223,7 +210,6 @@ def mostrar_janela_carregamento():
 
 
 def atualizar_texto_carregamento():
-    """Atualiza o texto da janela de carregamento com animação de pontinhos."""
     pontos = ""
     while animando and not cancelar_evento.is_set():
         pontos += "."
@@ -236,13 +222,11 @@ def atualizar_texto_carregamento():
 
 
 def fechar_janela_carregamento():
-    """Fecha a janela de carregamento e para a animação."""
     global animando
     animando = False  
     loading_window.destroy()  
 
 def bloquear_campos(bloquear):
-    """Bloqueia ou desbloqueia as caixas de entrada.""" 
     state = "disabled" if bloquear else "normal"
     entry_driver.config(state=state)
     entry_server.config(state=state)
@@ -289,9 +273,8 @@ def importar():
 
 
 def preencher_campos_com_parametros_salvos():
-    """Preenche os campos da interface com os últimos valores salvos no arquivo de conexão."""
     if not os.path.exists(caminho_parametros):
-        return  # Se o arquivo não existir ainda, não faz nada
+        return
 
     try:
         with open(caminho_parametros, "r") as f:
@@ -333,7 +316,6 @@ def atualizar_bancos_disponiveis(event=None):
     senha = entry_password.get().strip()
 
     try:
-        # Tenta conectar e buscar os bancos
         string_conexao = f"DRIVER={driver};SERVER={servidor};"
         if trusted:
             string_conexao += "Trusted_Connection=yes;"
@@ -346,7 +328,7 @@ def atualizar_bancos_disponiveis(event=None):
             SELECT name 
             FROM sys.databases 
             WHERE name NOT IN ('master', 'tempdb', 'model', 'msdb', 'Nextt.Compras')
-            AND state = 0  -- Somente bancos online
+            AND state = 0  
             ORDER BY name
         """)
         bancos = [row[0] for row in cursor.fetchall()]
@@ -358,12 +340,10 @@ def atualizar_bancos_disponiveis(event=None):
             entry_database.set("Nenhum banco encontrado")
             return
 
-        # Atualiza o menu suspenso com os bancos
         entry_database['values'] = bancos
         if bancos:
-            entry_database.current(0)  # Seleciona o primeiro banco, se disponível
+            entry_database.current(0)
 
-        # Atualiza a lista de bancos na entrada de banco de dados
         entry_database['values'] = bancos
         entry_database.set(bancos[0] if bancos else "Nenhum banco encontrado")
 
@@ -395,7 +375,7 @@ except Exception as e:
     print(f"Erro ao carregar a imagem: {e}")
 
 custom_font = font.Font(family="Arial", size=12, weight="bold")
-label_text = tk.Label(root, text="Cadastro em Lotes Automatizado | Demo", font=custom_font)
+label_text = tk.Label(root, text=f"Cadastro em Lotes Automatizado {VERSAO}", font=custom_font)
 label_text.grid(row=1, column=0, columnspan=2, pady=(0, 10), sticky="n")
 
 tk.Label(root, text="Driver:").grid(row=2, column=0, padx=10, pady=5, sticky="e")
@@ -406,25 +386,20 @@ entry_driver.insert(0, f"{driver_mais_recente}")
 tk.Label(root, text="Servidor:").grid(row=3, column=0, padx=10, pady=5, sticky="e")
 entry_server = tk.Entry(root, width=30)
 entry_server.grid(row=3, column=1, padx=10, pady=5, sticky="w")
-#btn_refresh_bancos = tk.Button(root, text="Atualizar Bancos", command=atualizar_bancos_disponiveis)
 
 var_importacao = tk.BooleanVar()
 
 def alternar_modo_importacao():
     estado = tk.DISABLED if var_importacao.get() else tk.NORMAL
-    # Desativar ou ativar campos e botões
     for entry in [entry_driver, entry_server, entry_database, entry_username, entry_password]:
         entry.config(state=estado)
     checkbutton_trusted_connection.config(state=estado)
     btn_importar.config(state=estado)
-    #btn_refresh_bancos.config(state=estado)
 
 checkbutton_importacao = tk.Checkbutton(
     root, text="Modo Importação (Offline)", variable=var_importacao, command=alternar_modo_importacao
 )
 checkbutton_importacao.grid(row=10, column=0, columnspan=2, pady=(5, 0))
-
-#btn_refresh_bancos.grid(row=9, column=1, padx=(5, 10), pady=5, sticky="w")
 
 tk.Label(root, text="Banco de Dados:").grid(row=4, column=0, padx=10, pady=5, sticky="e")
 entry_database = ttk.Combobox(root, width=27, state="readonly")
@@ -450,7 +425,6 @@ frame_buttons.grid(row=8, column=0, columnspan=2, pady=15)
 
 
 def executar_acao():
-    """Define a ação do botão com base na checkbox de Importação."""
     if var_importacao.get():
         baixar_planilha()
     else:

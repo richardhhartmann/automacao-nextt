@@ -40,7 +40,7 @@ Para manter as dependências isoladas e evitar conflitos com outras versões de 
 
 Com o ambiente virtual ativado, instale as bibliotecas necessárias listadas no arquivo requirements.txt:
 
-pip install -r requirements.txt
+pip install -r .\requirements.txt
 
 3. Executar o Projeto
 

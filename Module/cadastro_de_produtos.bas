@@ -292,7 +292,7 @@ Private Sub AplicarCoresDinamicas(Target As Range)
             corHex = RGB(180, 167, 214)
         Case "roxo escuro", "rox esc", "púrpura"
             corHex = RGB(128, 0, 128)
-            fonteClara =azulbebe True
+            fonteClara = True
         Case "preto", "ptr", "black", "preta"
             corHex = RGB(0, 0, 0)
             fonteClara = True
@@ -301,7 +301,7 @@ Private Sub AplicarCoresDinamicas(Target As Range)
         Case "cinza escuro", "cz esc", "cinza chumbo"
             corHex = RGB(105, 105, 105)
             fonteClara = True
-        Case "rosa", "rs", "rosa claro"
+        Case "rosa", "rs", "rosa claro", "pink"
             corHex = RGB(255, 182, 193)
         Case "rosa escuro", "rs esc", "fúcsia"
             corHex = RGB(199, 21, 133)

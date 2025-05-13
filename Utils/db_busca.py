@@ -50,7 +50,6 @@ def search_in_database(search_term):
     try:
         conn, cursor = get_connection_from_file('conexao_temp.txt')
         
-        # Primeiro obtemos todas as tabelas e colunas relevantes
         cursor.execute("""
             SELECT TABLE_NAME, COLUMN_NAME
             FROM INFORMATION_SCHEMA.COLUMNS
@@ -68,11 +67,9 @@ def search_in_database(search_term):
         
         print(f"\nBuscando em {total} colunas...")
         
-        # Barra de progresso
         with tqdm(tables_and_columns, unit="col", desc="Progresso") as pbar:
             for table, column in pbar:
                 try:
-                    # Consulta otimizada
                     query = f"""
                     SELECT TOP 1000 CAST([{column}] AS NVARCHAR(MAX)) AS Value 
                     FROM [{table}] 
@@ -87,13 +84,12 @@ def search_in_database(search_term):
                     pbar.write(f"Erro em {table}.{column}: {str(e)}")
                     continue
 
-        # Exibição dos resultados
         if results:
             print(f"\nResultados para '{search_term}':")
             for location, values in results.items():
                 table, column = location.split('.')
                 print(f"\nTabela: {table}\nColuna: {column}")
-                for i, value in enumerate(values[:5], 1):  # Mostra até 5 valores por coluna
+                for i, value in enumerate(values[:5], 1):
                     print(f"  {i}. {value}")
                 if len(values) > 5:
                     print(f"  (+ {len(values)-5} resultados adicionais)")
