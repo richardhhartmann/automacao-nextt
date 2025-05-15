@@ -11,7 +11,7 @@ from tkinter import font, Toplevel, ttk, filedialog
 from PIL import Image, ImageTk
 from Auto.db_connection import preencher_planilha
 from Auto.db_module import importar_modulo_vba
-from cadastros_auto_nextt import cadastrar_produto, cadastrar_pedido
+from Auto.cadastros_auto_nextt import cadastrar_produto, cadastrar_pedido
 from Auto.importacao import importacao_dados
 
 cancelar_evento = threading.Event()
