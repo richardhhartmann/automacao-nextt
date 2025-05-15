@@ -405,7 +405,8 @@ root.columnconfigure(0, weight=1)
 root.columnconfigure(1, weight=1)
 
 image_path = os.path.join(os.getcwd(), "Public", "brand.png")
-icon_img = ImageTk.PhotoImage(file="brand-ico.ico")
+icon_path = os.path.join("Public", "brand-ico.ico")
+icon_img = ImageTk.PhotoImage(file=icon_path)
 
 root.iconphoto(True, icon_img)
 
