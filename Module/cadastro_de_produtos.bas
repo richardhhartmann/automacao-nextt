@@ -26,24 +26,24 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         End If
         Application.EnableEvents = False
         ' Verifica colunas R a U (18 a 21)
-        Dim i As Long
-        For i = 18 To 21
-            Dim colEntrada As Range, celula As Range
-            Dim existeValor As Boolean
+        'Dim i As Long
+        'For i = 18 To 21
+            'Dim colEntrada As Range, celula As Range
+            'Dim existeValor As Boolean
     
-            Set colEntrada = Me.Range(Me.Cells(7, i), Me.Cells(1007, i))
-            existeValor = False
+            'Set colEntrada = Me.Range(Me.Cells(7, i), Me.Cells(1007, i))
+            'existeValor = False
     
-            For Each celula In colEntrada
-                If Trim(celula.Value) <> "" Then
-                    existeValor = True
-                    Exit For
-                End If
-            Next celula
+            'For Each celula In colEntrada
+                'If Trim(celula.Value) <> "" Then
+                    'existeValor = True
+                    'Exit For
+                'End If
+            'Next celula
     
             ' Coluna de apoio correspondente: V (22) a Y (25)
-            Me.Columns(i + 4).Hidden = Not existeValor
-        Next i
+            'Me.Columns(i + 4).Hidden = Not existeValor
+        'Next i
         Application.EnableEvents = True
         
         GoTo Finalizar
