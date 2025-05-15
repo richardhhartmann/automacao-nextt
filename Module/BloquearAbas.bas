@@ -74,24 +74,24 @@ Sub BloquearCadastroPedidos()
     Dim ws As Worksheet
     Set ws = ThisWorkbook.Sheets("Cadastro de Pedidos")
 
-    ' Desproteger a planilha
-    On Error Resume Next
-    ws.Unprotect password:="nexttsol"
-    On Error GoTo 0
+    ws.Unprotect Password:="nexttsol"
 
-    ' Desbloquear todas as células primeiro
     ws.Cells.Locked = False
 
-    ' Bloquear os intervalos específicos
-    ws.Range("A1:XFD6").Locked = True
+    ws.Range("A1:AM6").Locked = True
 
-    ' Configurar a proteção da planilha
-    ws.Protect password:="nexttsol", UserInterfaceOnly:=False, _
-                AllowFormattingCells:=False, AllowFormattingColumns:=False, _
-                AllowFormattingRows:=False, AllowInsertingColumns:=False, _
-                AllowInsertingRows:=False, AllowInsertingHyperlinks:=False, _
-                AllowDeletingColumns:=False, AllowDeletingRows:=False, _
-                AllowSorting:=False, AllowFiltering:=False, AllowUsingPivotTables:=False
+    ws.Protect Password:="nexttsol", _
+               AllowFormattingCells:=False, _
+               AllowInsertingColumns:=False, _
+               AllowInsertingRows:=False, _
+               AllowDeletingColumns:=False, _
+               AllowDeletingRows:=False, _
+               AllowSorting:=False, _
+               AllowFiltering:=False, _
+               AllowUsingPivotTables:=False, _
+               DrawingObjects:=True, _
+               Contents:=True, _
+               Scenarios:=True
 End Sub
 
 Sub BloquearCadastroMarcas()

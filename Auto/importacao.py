@@ -30,7 +30,7 @@ def conectar_banco():
     conn_str = ";".join(parts)
     return pyodbc.connect(conn_str)
 
-def importacao(caminho):
+def importacao_dados(caminho):
     if not caminho:
         print("Nenhum arquivo selecionado.")
         return
@@ -47,7 +47,6 @@ def importacao(caminho):
             cursor.execute("SELECT ISNULL(MAX(mar_codigo), 0) + 1 FROM tb_marca")
             mar_codigo = cursor.fetchone()[0] or 1
 
-            print("##### INSERINDO MARCAS #####")
             sql_insert_marcas = "INSERT INTO tb_marca (mar_codigo, mar_descricao) VALUES (?, ?)"
             dados_marca = []
 
@@ -61,6 +60,8 @@ def importacao(caminho):
                 cursor.executemany(sql_insert_marcas, dados_marca)
                 conn.commit()
                 print(f"{len(dados_marca)} marcas inseridas com sucesso!")
+            else:
+                print("A planilha 'Cadastro de Marcas' não contém dados válidos para importação.")
         else:
             print("A aba 'Cadastro de Marcas' não foi encontrada.")
 
@@ -70,7 +71,6 @@ def importacao(caminho):
             cursor.execute("SELECT ISNULL(MAX(seg_codigo), 0) + 1 FROM tb_segmento")
             seg_codigo = cursor.fetchone()[0] or 1
 
-            print("##### INSERINDO SEGMENTOS #####")
             sql_insert_segmento = "INSERT INTO tb_segmento (seg_codigo, seg_descricao, ram_codigo) VALUES (?, ?, ?)"
             dados_segmento = []
 
@@ -84,6 +84,8 @@ def importacao(caminho):
                 cursor.executemany(sql_insert_segmento, dados_segmento)
                 conn.commit()
                 print(f"{len(dados_segmento)} segmentos inseridos com sucesso!")
+            else:
+                print("A planilha 'Cadastro de Segmento' não contém dados válidos para importação.")
         else:
             print("A aba 'Cadastro de Segmento' não foi encontrada.")
 
@@ -93,7 +95,6 @@ def importacao(caminho):
             cursor.execute("SELECT ISNULL(MAX(sec_codigo), 0) + 1 FROM tb_secao")
             sec_codigo = cursor.fetchone()[0] or 1
 
-            print("##### INSERINDO SEÇÕES #####")
             sql_insert_secao = """
                 INSERT INTO tb_secao (
                     sec_codigo, sec_descricao, seg_codigo, 
@@ -113,6 +114,8 @@ def importacao(caminho):
                 cursor.executemany(sql_insert_secao, dados_secao)
                 conn.commit()
                 print(f"{len(dados_secao)} seções inseridas com sucesso!")
+            else:
+                print("A planilha 'Cadastro de Secao' não contém dados válidos para importação.")
         else:
             print("A aba 'Cadastro de Secao' não foi encontrada.")
 
@@ -122,7 +125,6 @@ def importacao(caminho):
             cursor.execute("SELECT ISNULL(MAX(esp_codigo), 0) + 1 FROM tb_especie")
             esp_codigo = cursor.fetchone()[0] or 1
 
-            print("##### INSERINDO ESPÉCIES #####")
             sql_insert_especie = """
                 INSERT INTO tb_especie (
                     sec_codigo, esp_codigo, esp_descricao, 
@@ -142,6 +144,8 @@ def importacao(caminho):
                 cursor.executemany(sql_insert_especie, dados_especie)
                 conn.commit()
                 print(f"{len(dados_especie)} espécies inseridas com sucesso!")
+            else:
+                print("A planilha 'Cadastro de Especie' não contém dados válidos para importação.")
         else:
             print("A aba 'Cadastro de Especie' não foi encontrada.")
 

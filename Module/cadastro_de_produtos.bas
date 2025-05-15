@@ -14,6 +14,7 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
 End Sub
 
 Private Sub Worksheet_Change(ByVal Target As Range)
+    Me.Unprotect password:="nexttsol"
     On Error GoTo TratarErro
     Application.ScreenUpdating = False
     Application.Calculation = xlCalculationManual
@@ -184,7 +185,13 @@ Continuar:
             Dim bkCel As Range
             For Each bkCel In bkChanged
                 If UCase(Trim(bkCel.Value)) = "OK" Then
+                    On Error Resume Next
                     ThisWorkbook.Save
+                    If Err.Number <> 0 Then
+                        MsgBox "Erro ao salvar o arquivo: " & Err.Description, vbExclamation
+                        Err.Clear
+                    End If
+                    On Error GoTo 0
                     Exit For
                 End If
             Next bkCel
@@ -246,6 +253,8 @@ TratarErro:
     MsgBox "Erro: " & Err.Description & vbCrLf & _
            "Objeto com problema: " & TypeName(Err.Source), vbCritical
     Resume Finalizar
+
+    Me.Protect password:="nexttsol"
 End Sub
 
 Private Sub AplicarCoresDinamicas(Target As Range)

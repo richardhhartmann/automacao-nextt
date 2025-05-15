@@ -11,7 +11,6 @@ from tkinter import filedialog
 from datetime import datetime
 from openpyxl.utils import get_column_letter, column_index_from_string
 from contextlib import contextmanager
-from importacao import importacao
 
 BATCH_SIZE = 100
 LINHA_CABECALHO = 3
@@ -62,14 +61,6 @@ def get_db_connection(file_name='conexao_temp.txt'):
             cursor.close()
         if 'connection' in locals():
             connection.close()
-
-def selecionar_arquivo():
-    root = tk.Tk()
-    root.withdraw()
-    return filedialog.askopenfilename(
-        title="Selecione o arquivo Excel",
-        filetypes=[("Arquivos Excel", "*.xlsx;*.xls;*.xlsm")]
-    )
 
 def get_colunas_adicionais(ws, linha_cabecalho=LINHA_CABECALHO, coluna_inicial=COLUNA_INICIAL_ADICIONAIS):
     colunas = []
@@ -248,30 +239,19 @@ def verificar_duplicados(cursor, referencias_marcas):
     debug_log(f"Encontrados {len(duplicados)} produtos duplicados")
     return duplicados
 
-def cadastrar_produto():
-    global caminho_arquivo_produto
-    debug_log("Iniciando processo de cadastro de produto")
+def cadastrar_produto(excel):
     start_total = time.time()
-    
-    caminho_arquivo_produto = selecionar_arquivo()
-    if not caminho_arquivo_produto:
-        return
 
+    if not excel:
+        return
+    
     try:
         debug_log("Carregando arquivo Excel")
-        wb = openpyxl.load_workbook(caminho_arquivo_produto, data_only=True)
-        
-        if "Cadastro de Produtos" not in wb.sheetnames or "Cadastro de Pedidos" not in wb.sheetnames:
-            from main import exportar_conexao
-            debug_log("Abas 'Cadastro de Produtos' ou 'Cadastro de Pedidos' não encontradas")
-            importacao(caminho_arquivo_produto)
-            exportar_conexao()
-        else:
-            print("oie")
+        wb = openpyxl.load_workbook(excel, data_only=True)
             
         ws = wb["Cadastro de Produtos"]
         
-        df = pd.read_excel(caminho_arquivo_produto, sheet_name="Cadastro de Produtos", skiprows=6, header=None)
+        df = pd.read_excel(excel, sheet_name="Cadastro de Produtos", skiprows=6, header=None)
 
         df = df.dropna(how='all')
         
@@ -433,17 +413,16 @@ def cadastrar_produto():
         if 'wb' in locals():
             wb.close()
 
-def cadastrar_pedido():
+def cadastrar_pedido(excel):
     debug_log("Iniciando processo de cadastro de pedido")
     start_total = time.time()
     
-    caminho_arquivo_pedido = caminho_arquivo_produto
-    if not caminho_arquivo_pedido:
+    if not excel:
         return []
 
     try:
         debug_log("Carregando arquivo Excel")
-        df = pd.read_excel(caminho_arquivo_pedido, sheet_name="Cadastro de Pedidos", skiprows=6, header=None)
+        df = pd.read_excel(excel, sheet_name="Cadastro de Pedidos", skiprows=6, header=None)
         df = df.dropna(how='all')
         
         if df.empty:

@@ -31,19 +31,24 @@ Private Sub Worksheet_SelectionChange(ByVal Target As Range)
 End Sub
 
 Private Sub Worksheet_Change(ByVal Target As Range)
-    Dim rngMonitorada As Range
-    Dim cel As Range
     On Error GoTo Finalizar
 
-    ' Seu código existente para verificação de duplicados
+    Application.EnableEvents = False
+    Application.ScreenUpdating = False
+
+    Dim rngMonitorada As Range
     Set rngMonitorada = Me.Range("L7:U1007")
-    
+
+    Dim cel As Range
+    Dim linhasProcessadas As Object
+    Dim colEntrada As Range
+    Dim celula As Range
+    Dim i As Integer
+    Dim existeValor As Boolean
+
+    ' 1. Verificação de códigos duplicados por linha
     If Not Intersect(Target, rngMonitorada) Is Nothing Then
-        Application.EnableEvents = False
-        
-        Dim linhasProcessadas As Object
         Set linhasProcessadas = CreateObject("Scripting.Dictionary")
-        
         For Each cel In Intersect(Target, rngMonitorada)
             If Not linhasProcessadas.Exists(cel.Row) Then
                 linhasProcessadas.Add cel.Row, True
@@ -51,68 +56,43 @@ Private Sub Worksheet_Change(ByVal Target As Range)
             End If
         Next cel
     End If
-    
-    ' Seu código existente para ocultar colunas de apoio
-    Dim i As Integer
-    Dim colEntrada As Range
-    Dim celula As Range
-    Dim existeValor As Boolean
 
-    If Not Intersect(Target, Me.Range("L7:U1007")) Is Nothing Then
-        Application.ScreenUpdating = False
-
-        For i = 12 To 21
+    ' 2. Ocultação de colunas auxiliares (colunas AB a AK)
+    If Not Intersect(Target, rngMonitorada) Is Nothing Then
+        For i = 12 To 21 ' colunas L (12) a U (21)
             Set colEntrada = Me.Range(Me.Cells(7, i), Me.Cells(1007, i))
             existeValor = False
-
             For Each celula In colEntrada
                 If Trim(celula.Value) <> "" Then
                     existeValor = True
                     Exit For
                 End If
             Next celula
-
-            Me.Columns(i + 10).Hidden = Not existeValor
+            Me.Columns(i + 10).Hidden = Not existeValor ' oculta colunas V a AE
         Next i
     End If
-    
-    ' Código para lógica dinâmica de colunas (V7:AE1007)
+
+    ' 3. Desocultar colunas de filial associadas (AF em diante)
     Dim rngTrigger As Range
-    Dim affectedColumn As Integer
-    Dim columnsToUnhide As Integer
-    Dim startColumn As Integer
-    Dim endColumn As Integer
-    Dim j As Integer
-    
-    ' Definir o intervalo que pode acionar a nova funcionalidade
     Set rngTrigger = Me.Range("V7:AE1007")
-    
-    ' Verificar se a alteração ocorreu no intervalo V7:AE1007
+
     If Not Intersect(Target, rngTrigger) Is Nothing Then
-        Application.EnableEvents = False
-        Application.ScreenUpdating = False
-        
-        ' Obter o número da coluna relativa (V=1, W=2, ..., AE=11)
+        Dim affectedColumn As Integer
+        Dim columnsToUnhide As Integer
+        Dim startColumn As Integer
+        Dim endColumn As Integer
+        Dim j As Integer
+        Dim rngToCheck As Range
+
         affectedColumn = Target.Column - rngTrigger.Column + 1
-        
-        ' Obter o número de filiais do banco de dados
         columnsToUnhide = GetTotalFiliais()
-        
+
         If columnsToUnhide > 0 Then
-            ' Calcular o intervalo de colunas a desocultar
-            ' Coluna AN é a 40ª coluna (AN=40, AO=41, etc.)
             startColumn = 40 + (affectedColumn - 1) * columnsToUnhide
             endColumn = startColumn + columnsToUnhide - 1
-            
-            ' Verificar se não ultrapassa o limite de colunas
-            If endColumn > Me.Columns.Count Then
-                endColumn = Me.Columns.Count
-            End If
-            
-            ' Verificar se há valores nas colunas relacionadas a V7:AE1007
-            Dim rngToCheck As Range
+            If endColumn > Me.Columns.Count Then endColumn = Me.Columns.Count
+
             Set rngToCheck = Me.Range(Me.Cells(7, Target.Column), Me.Cells(1007, Target.Column))
-            
             existeValor = False
             For Each celula In rngToCheck
                 If Trim(celula.Value) <> "" Then
@@ -120,14 +100,25 @@ Private Sub Worksheet_Change(ByVal Target As Range)
                     Exit For
                 End If
             Next celula
-            
-            ' Mostrar/ocultar colunas conforme existam valores
+
             For j = startColumn To endColumn
                 Me.Columns(j).Hidden = Not existeValor
             Next j
         End If
-        
-        Application.ScreenUpdating = True
+    End If
+
+    ' 4. Validação de códigos (SQL)
+    If Not Intersect(Target, rngMonitorada) Is Nothing Then
+        If codigosValidos Is Nothing Then Call modValidacaoCodigo.CarregarCodigosValidos
+
+        For Each cel In Intersect(Target, rngMonitorada)
+            If Not IsEmpty(cel.Value) Then
+                If Not CodigoExiste(CStr(cel.Value)) Then
+                    MsgBox "O código '" & cel.Value & "' não existe na base de dados.", vbExclamation
+                    cel.ClearContents
+                End If
+            End If
+        Next cel
     End If
 
 Finalizar:
@@ -135,10 +126,9 @@ Finalizar:
     Application.ScreenUpdating = True
 End Sub
 
-' Função para verificar e ocultar colunas quando não houver valores
 Private Sub VerificarOcultarColunasDinamicas()
     On Error GoTo ErrorHandler
-    
+
     Dim columnsToUnhide As Integer
     Dim i As Integer, j As Integer
     Dim startColumn As Integer, endColumn As Integer
@@ -147,16 +137,12 @@ Private Sub VerificarOcultarColunasDinamicas()
     Dim existeValor As Boolean
     Dim wsProtected As Boolean
     
-    
-    ' Obter o número de filiais do banco de dados
     columnsToUnhide = GetTotalFiliais()
     
     If columnsToUnhide > 0 Then
         Application.ScreenUpdating = False
         
-        ' VERIFICAR COLUNAS DE TRIGGER E MOSTRAR SE NECESSÁRIO
-        For i = 1 To 11 ' V=1 (coluna 22), W=2 (coluna 23), ..., AE=11 (coluna 32)
-            ' Verificar se há valores na coluna de trigger
+        For i = 1 To 11
             Set rngTriggerCol = Me.Range(Me.Cells(7, 21 + i), Me.Cells(1007, 21 + i))
             existeValor = False
             
@@ -167,11 +153,9 @@ Private Sub VerificarOcultarColunasDinamicas()
                 End If
             Next celula
             
-            ' Calcular colunas correspondentes
-            startColumn = 40 + (i - 1) * columnsToUnhide ' AN=40
+            startColumn = 40 + (i - 1) * columnsToUnhide
             endColumn = startColumn + columnsToUnhide - 1
             
-            ' Mostrar colunas se houver valores no trigger
             If existeValor Then
                 For j = startColumn To endColumn
                     If j <= Me.Columns.Count Then
@@ -189,11 +173,9 @@ Private Sub VerificarOcultarColunasDinamicas()
     Exit Sub
 
 ErrorHandler:
-    ' Tratamento de erro genérico
     MsgBox "Erro ao gerenciar visibilidade das colunas: " & Err.Description, vbExclamation
 End Sub
 
-' Função para obter o total de filiais do banco de dados
 Private Function GetTotalFiliais() As Integer
     On Error GoTo ErroHandler
     
@@ -205,13 +187,10 @@ Private Function GetTotalFiliais() As Integer
     Dim filePath As String
     Dim result As Integer
     
-    ' Inicializar com valor padrão em caso de erro
     GetTotalFiliais = 0
     
-    ' Caminho do arquivo de conexão
     filePath = ThisWorkbook.Path & "\conexao_temp.txt"
     
-    ' Tenta ler o conteúdo do arquivo
     On Error GoTo ErroArquivo
     jsonText = CreateObject("Scripting.FileSystemObject").OpenTextFile(filePath).ReadAll
     Set json = ParseJson(jsonText)
@@ -222,11 +201,9 @@ Private Function GetTotalFiliais() As Integer
         Exit Function
     End If
     
-    ' Criar conexão e executar consulta
     Set conn = CreateObject("ADODB.Connection")
     Set rs = CreateObject("ADODB.Recordset")
     
-    ' Montar string de conexão exatamente como no seu código funcional
     connectionString = "Provider=" & json("driver") & ";" & _
                        "Data Source=" & json("server") & ";" & _
                        "Initial Catalog=" & json("database") & ";" & _
@@ -239,7 +216,6 @@ Private Function GetTotalFiliais() As Integer
     
     result = rs.Fields("Total").Value
     
-    ' Fechar objetos
     rs.Close
     conn.Close
     
@@ -258,9 +234,6 @@ ErroHandler:
     GetTotalFiliais = 0
 End Function
 
-
-
-' Função alternativa para parse de JSON simples
 Private Function ParseJsonString(jsonText As String) As Object
     Dim json As Object
     Dim lines As Variant
@@ -271,7 +244,6 @@ Private Function ParseJsonString(jsonText As String) As Object
     
     Set json = CreateObject("Scripting.Dictionary")
     
-    ' Remover chaves e espaços
     jsonText = Replace(jsonText, "{", "")
     jsonText = Replace(jsonText, "}", "")
     jsonText = Replace(jsonText, Chr(34), "")
@@ -292,6 +264,7 @@ Private Function ParseJsonString(jsonText As String) As Object
     
     Set ParseJsonString = json
 End Function
+
 Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
     Dim ws As Worksheet
     Dim i As Long
@@ -305,22 +278,21 @@ Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
     Dim ProximaColuna As Long
     Dim valoresJ As String
     Dim celulaJ As Range
-    
+
     Set ws = ThisWorkbook.Sheets("Cadastro de Pedidos")
     
     linha = ActiveCell.Row
-    colunaInicial = ws.Range("AAF1").Column ' Inicia em AAF
-    Set celulaJ = ws.Cells(linha, 10) ' Coluna J
+    colunaInicial = ws.Range("AAF1").Column 
+    Set celulaJ = ws.Cells(linha, 10)
     
     valoresJ = celulaJ.Value
     
     For i = 0 To ListBox1.ListCount - 1
         If ListBox1.Selected(i) Then
             valor = ListBox1.List(i)
-            numeroItem = i + 1 ' Pega o número do item (índice + 1)
+            numeroItem = i + 1
             jaExiste = False
             
-            ' Verifica se já existe da coluna AAF em diante
             For ultimaColuna = colunaInicial To 16384
                 If ws.Cells(linha, ultimaColuna).Value = numeroItem Then
                     jaExiste = True
@@ -332,7 +304,6 @@ Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
                         If Left(valoresJ, 1) = "/" Then valoresJ = Mid(valoresJ, 2)
                         If Right(valoresJ, 1) = "/" Then valoresJ = Left(valoresJ, Len(valoresJ) - 1)
                         
-                        ' Reorganiza após remoção
                         For ProximaColuna = ultimaColuna + 1 To 16384
                             If ws.Cells(linha, ProximaColuna).Value <> "" Then
                                 ws.Cells(linha, ProximaColuna - 1).Value = ws.Cells(linha, ProximaColuna).Value
@@ -344,7 +315,6 @@ Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
                 End If
             Next ultimaColuna
 
-            ' Se não existe, adiciona a partir de AAF
             If Not jaExiste Then
                 For ultimaColuna = colunaInicial To 16384
                     If ws.Cells(linha, ultimaColuna).Value = "" Then
@@ -364,12 +334,14 @@ Private Sub ListBox1_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
 
     celulaJ.Value = valoresJ
     Me.OLEObjects("ListBox1").Visible = False
-End Sub
 
+End Sub
 
 Private Sub CriarListBoxSeNecessario()
     Dim ws As Worksheet
     Dim listBox As Object
+    
+    On Error GoTo ErrorHandler
     
     Set ws = ThisWorkbook.Sheets("Cadastro de Pedidos")
     
@@ -379,10 +351,21 @@ Private Sub CriarListBoxSeNecessario()
     
     If listBox Is Nothing Then
         Set listBox = ws.OLEObjects.Add(ClassType:="Forms.ListBox.1", _
-                                        Left:=100, Top:=100, Width:=150, Height:=100)
+                                      Left:=100, Top:=100, Width:=150, Height:=100)
         listBox.Name = "ListBox1"
         listBox.Visible = False
     End If
+    
+    If Not listBox Is Nothing Then
+        listBox.Object.MultiSelect = fmMultiSelectMulti
+    End If
+    
+ExitSub:
+    Exit Sub
+    
+ErrorHandler:
+    MsgBox "Erro ao criar ListBox: " & Err.Description, vbExclamation
+    Resume ExitSub
 End Sub
 
 Private Sub CarregarItensListBox()
@@ -391,7 +374,7 @@ Private Sub CarregarItensListBox()
     Dim celula As Range
     Dim listBox As Object
     Dim ws As Worksheet
-    
+
     Set ws = ThisWorkbook.Sheets("Cadastro de Pedidos")
     Set listBox = ws.OLEObjects("ListBox1").Object
     
@@ -408,5 +391,3 @@ Private Sub CarregarItensListBox()
         .MultiSelect = fmMultiSelectMulti
     End With
 End Sub
-
-

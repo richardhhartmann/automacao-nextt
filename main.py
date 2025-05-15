@@ -1,3 +1,4 @@
+import openpyxl
 import tkinter as tk
 import json
 import time
@@ -11,9 +12,12 @@ from PIL import Image, ImageTk
 from Auto.db_connection import preencher_planilha
 from Auto.db_module import importar_modulo_vba
 from cadastros_auto_nextt import cadastrar_produto, cadastrar_pedido
-cancelar_evento = threading.Event()
+from Auto.importacao import importacao_dados
 
+cancelar_evento = threading.Event()
 VERSAO = '1.0'
+arquivo_excel_selecionado = None
+nome_empresa = ""
 
 def cancelar_processamento():
     global cancelar_evento
@@ -74,7 +78,6 @@ def validar_campos():
 sql_server_drivers = [d for d in pyodbc.drivers() if "SQL Server" in d]
 if sql_server_drivers:
     driver_mais_recente = sql_server_drivers[-1]
-    print(f"Driver selecionado: {driver_mais_recente}")
 
 def exportar_conexao():
     if not validar_campos():
@@ -164,23 +167,6 @@ modulos_vba = [
 caminho_arquivo = 'Cadastros Auto Nextt limpa.xlsx'
 caminho_novo_arquivo = 'Cadastros Auto Nextt.xlsx'
 
-class OutputRedirector:
-    def __init__(self, text_widget):
-        self.text_widget = text_widget
-    
-    def write(self, message):
-        self.text_widget.insert(tk.END, message)
-        self.text_widget.yview(tk.END)
-        
-        sys.__stdout__.write(message)
-        sys.__stdout__.flush()
-        
-        loading_window.update()
-
-    def flush(self):
-        pass
-
-
 def atualizar_status(mensagem):
     label_status.config(text=mensagem)
     root.update() 
@@ -198,16 +184,33 @@ def mostrar_janela_carregamento():
     label_loading = tk.Label(loading_window, text="Extraindo Dados...", font=("Arial", 12))
     label_loading.pack(pady=10)
 
-    progress_bar = ttk.Progressbar(loading_window, mode='indeterminate', length=250)
+    progress_bar = ttk.Progressbar(
+        loading_window, 
+        mode='determinate', 
+        length=250,
+        maximum=100,
+        style='green.Horizontal.TProgressbar'  # Estilo opcional para melhor visualização
+    )
     progress_bar.pack(pady=(20, 10))
-    progress_bar.start(15)
+
+    def animar_progresso():
+        if not animando:  # Verifica se a animação deve continuar
+            return
+            
+        valor_atual = progress_bar['value']
+        novo_valor = (valor_atual + 2) % 100  # Incrementa e reinicia após 100
+        
+        progress_bar['value'] = novo_valor
+        loading_window.after(50, animar_progresso)  # Ajuste o tempo para velocidade desejada
+
+    # Inicia a animação
+    animar_progresso()
 
     botao_cancelar = ttk.Button(loading_window, text="Cancelar", command=cancelar_processamento)
     botao_cancelar.pack(pady=(5, 10))
     botao_cancelar.config(width=20)
 
     threading.Thread(target=atualizar_texto_carregamento, daemon=True).start()
-
 
 def atualizar_texto_carregamento():
     pontos = ""
@@ -218,8 +221,6 @@ def atualizar_texto_carregamento():
         texto = f"Extraindo Dados {nome_empresa}{pontos}" if 'nome_empresa' in globals() else f"Extraindo Dados{pontos}"
         label_loading.config(text=texto)
         time.sleep(0.5)
-
-
 
 def fechar_janela_carregamento():
     global animando
@@ -253,24 +254,63 @@ def main():
     fechar_janela_carregamento()
     bloquear_campos(False)
 
+import threading
+from tkinter import Tk, filedialog
+
 def importar():
     if not validar_campos():
         return
 
-    mostrar_janela_carregamento()
+    dados_conexao = {
+        "driver": driver_mais_recente,
+        "server": entry_server.get().strip(),
+        "database": entry_database.get().strip(),
+        "username": entry_username.get().strip(),
+        "password": entry_password.get().strip(),
+        "trusted_connection": "yes" if var_trusted_connection.get() else "no"
+    }
+
+    with open(caminho_parametros, 'w') as f:
+            json.dump(dados_conexao, f, indent=4) 
 
     def executar_cadastro():
         try:
             if cancelar_evento.is_set():
                 print("Operação cancelada antes do início.")
                 return
-            cadastrar_produto()
-            cadastrar_pedido()
+                
+            root = Tk()
+            root.withdraw()
+            root.attributes('-topmost', True) 
+            
+            caminho_excel = filedialog.askopenfilename(
+                title="Selecione a planilha Excel",
+                filetypes=[("Arquivos Excel", "*.xlsx *.xls *.xlsm"), ("Todos os arquivos", "*.*")]
+            )
+            
+            if not caminho_excel:
+                print("Nenhum arquivo selecionado.")
+                return
+            
+            global arquivo_excel_selecionado
+            arquivo_excel_selecionado = caminho_excel
+            
+            print(f"Arquivo selecionado: {caminho_excel}")
+            
+            wb = openpyxl.load_workbook(caminho_excel, data_only=True)
+
+            if "Cadastro de Produtos" not in wb.sheetnames or "Cadastro de Pedidos" not in wb.sheetnames:
+                importacao_dados(caminho_excel)
+                exportar_conexao()
+            else:
+                print("Iniciando cadastros")
+                cadastrar_produto(caminho_excel)
+                cadastrar_pedido(caminho_excel)
+            
         finally:
             loading_window.after(0, fechar_janela_carregamento)
 
     threading.Thread(target=executar_cadastro, daemon=True).start()
-
 
 def preencher_campos_com_parametros_salvos():
     if not os.path.exists(caminho_parametros):
@@ -299,6 +339,9 @@ def preencher_campos_com_parametros_salvos():
         trusted = dados.get("trusted_connection", "").lower() == "yes"
         var_trusted_connection.set(trusted)
 
+        if dados.get("server") and dados.get("driver"):
+            root.after(100, lambda: atualizar_bancos_disponiveis())
+            
     except Exception as e:
         print(f"Erro ao carregar dados salvos: {e}")
 
@@ -423,13 +466,20 @@ checkbutton_trusted_connection.grid(row=7, column=0, columnspan=2, pady=10)
 frame_buttons = tk.Frame(root)
 frame_buttons.grid(row=8, column=0, columnspan=2, pady=15) 
 
+widgets_em_ordem = [entry_driver, entry_server, entry_database,
+                   entry_username, entry_password]
+
+for i, widget in enumerate(widgets_em_ordem):
+    widget.grid(row=2+i, column=1, padx=10, pady=5, sticky="w")  # Ajuste os números de linha conforme seu layout
+    widget.lift()
+
+entry_driver.focus_set()
 
 def executar_acao():
     if var_importacao.get():
         baixar_planilha()
     else:
         exportar_conexao()
-
 
 btn_exportar = tk.Button(frame_buttons, text="Baixar Planilha", width=15, height=2, command=executar_acao)
 btn_exportar.grid(row=0, column=0, padx=10)  

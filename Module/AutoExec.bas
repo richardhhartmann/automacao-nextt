@@ -3,7 +3,6 @@ Private Sub Workbook_Open()
     Dim imageFolder As String
     Dim brandPath As String, uploadPath As String, refreshPath As String
     Dim shp As Shape
-    Dim response As Integer
     
     Set ws = ThisWorkbook.Sheets("Nextt")
     imageFolder = ThisWorkbook.Path & "\Public\"
@@ -21,7 +20,7 @@ Private Sub Workbook_Open()
             Call BloquearTodasAbas.BloquearTodasAbas
             Call BloquearTodasAbas.BloquearCadastroProdutos
             Call BloquearTodasAbas.BloquearCadastroMarcas
-            'Call BloquearTodasAbas.BloquearCadastroPedidos
+            ' Call BloquearTodasAbas.BloquearCadastroPedidos
             Call OcultarAbasProtegidas.OcultarAbasProtegidas
             Call CriarShapeBotao.CriarShapeBotao
             Call CriarShapeBotao.CriarShapeBotaoCadastroPedidos
@@ -39,20 +38,11 @@ Private Sub Workbook_Open()
             End With
             Application.EnableEvents = True
 
-            response = MsgBox("Deseja executar o monitoramento do banco de dados em tempo real?", vbQuestion + vbYesNo, "Monitoramento em Tempo Real")
-            
-            If response = vbYes Then
-                Call CheckDB.StartDBMonitoring
-            End If
+            Call CheckDB.StartDBMonitoring
 
         Else
             Call AtualizarInterface.AtualizarInterface
-
-            response = MsgBox("Deseja executar o monitoramento do banco de dados em tempo real?", vbQuestion + vbYesNo, "Monitoramento em Tempo Real")
-            
-            If response = vbYes Then
-                Call CheckDB.StartDBMonitoring
-            End If
+            Call CheckDB.StartDBMonitoring
             
         End If
 

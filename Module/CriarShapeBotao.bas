@@ -8,12 +8,14 @@ Sub CriarShapeBotao()
     Set wsMarca = ThisWorkbook.Sheets("Cadastro de Marcas")
     Set wsCadastro = ThisWorkbook.Sheets("Cadastro de Produtos")
     
+    ' Remover shapes anteriores, se existirem
     On Error Resume Next
     ws.Shapes("btnShape").Delete
     wsMarca.Shapes("cadastroMarca").Delete
     wsCadastro.Shapes("limparValoresBtn").Delete
     On Error GoTo 0
 
+    ' Botão: Nextt
     Dim botao As Shape
     Set botao = ws.Shapes.AddShape(msoShapeRoundedRectangle, 100, 1075, 200, 20)
     
@@ -21,6 +23,7 @@ Sub CriarShapeBotao()
         .Name = "btnShape"
         .TextFrame2.TextRange.Text = "Habilitar Modo Operador"
         .Fill.ForeColor.RGB = RGB(180, 198, 231)
+        .line.Visible = msoFalse
         
         With .TextFrame2.TextRange
             .Font.Size = 9
@@ -35,6 +38,7 @@ Sub CriarShapeBotao()
         .OnAction = "ReexibirAbas.ReexibirAbas"
     End With
 
+    ' Botão: Cadastro de Marcas
     Dim cadastroMarca As Shape
     Set cadastroMarca = wsMarca.Shapes.AddShape(msoShapeRoundedRectangle, 0, 175, 990, 15)
     
@@ -42,6 +46,7 @@ Sub CriarShapeBotao()
         .Name = "cadastroMarca"
         .TextFrame2.TextRange.Text = "Executar Cadastro"
         .Fill.ForeColor.RGB = RGB(243, 243, 243)
+        .line.Visible = msoFalse
         
         With .TextFrame2.TextRange
             .Font.Size = 9
@@ -56,27 +61,49 @@ Sub CriarShapeBotao()
         .OnAction = "ExecutarCadastroMarca"
     End With
 
+    ' Botão: Cadastro de Produtos (limpar valores)
     Dim limparBtn As Shape
-    Set limparBtn = wsCadastro.Shapes.AddShape(msoShapeRoundedRectangle, _
-        wsCadastro.Range("A1").Left + wsCadastro.Range("A1").Width - 75, _
-        wsCadastro.Range("A1").Top, 75, 15)
+    With wsCadastro
+        .Unprotect password:="nexttsol" ' Garante que a aba esteja desbloqueada
 
-    With limparBtn
-        .Name = "limparValoresBtn"
-        .TextFrame2.TextRange.Text = "Limpar Valores"
-        .Fill.ForeColor.RGB = RGB(180, 198, 231) ' Igual ao botÃ£o operador
+        Set limparBtn = .Shapes.AddShape(msoShapeRoundedRectangle, _
+            .Range("A1").Left + 125, .Range("A1").Top, 80, 20)
 
-        With .TextFrame2.TextRange
-            .Font.Size = 7
-            .Font.Name = "Arial"
-            .Font.Bold = msoFalse
-            .Font.Fill.ForeColor.RGB = RGB(61, 61, 61)
+        With limparBtn
+            .Name = "limparValoresBtn"
+            .TextFrame2.TextRange.Text = "Limpar Valores"
+            .Fill.ForeColor.RGB = RGB(180, 198, 231)
+            .line.Visible = msoFalse
+
+            With .TextFrame2.TextRange
+                .Font.Size = 7
+                .Font.Name = "Arial"
+                .Font.Bold = msoFalse
+                .Font.Fill.ForeColor.RGB = RGB(61, 61, 61)
+            End With
+
+            .TextFrame2.VerticalAnchor = msoAnchorMiddle
+            .TextFrame2.TextRange.ParagraphFormat.Alignment = msoAlignCenter
+
+            .OnAction = "ConfirmarLimpeza"
         End With
 
-        .TextFrame2.VerticalAnchor = msoAnchorMiddle
-        .TextFrame2.TextRange.ParagraphFormat.Alignment = msoAlignCenter
+        ' Protege novamente a aba após inserir o botão
+        .Protect password:="nexttsol", _
+                 AllowFormattingCells:=False, _
+                 AllowInsertingColumns:=False, _
+                 AllowInsertingRows:=False, _
+                 AllowDeletingColumns:=False, _
+                 AllowDeletingRows:=False, _
+                 AllowSorting:=False, _
+                 AllowFiltering:=False, _
+                 AllowUsingPivotTables:=False, _
+                 DrawingObjects:=True, _
+                 Contents:=True, _
+                 Scenarios:=True, _
+                 UserInterfaceOnly:=True
 
-        .OnAction = "ConfirmarLimpeza"
+        .EnableSelection = xlUnlockedCells ' Evita seleção de células protegidas
     End With
 End Sub
 
@@ -93,28 +120,33 @@ Sub CriarShapeBotaoCadastroPedidos()
     Dim ws As Worksheet
     Dim wsCadastroPedidos As Worksheet
 
-    ' Definindo as abas
     Set ws = ThisWorkbook.Sheets("Nextt")
     Set wsCadastroPedidos = ThisWorkbook.Sheets("Cadastro de Pedidos")
     
-    ' Remover botão anterior, se houver
     On Error Resume Next
     wsCadastroPedidos.Shapes("limparValoresBtnPedidos").Delete
     On Error GoTo 0
 
-    ' Criar o botão na aba Cadastro de Pedidos
     Dim limparBtnPedidos As Shape
-    Set limparBtnPedidos = wsCadastroPedidos.Shapes.AddShape(msoShapeRoundedRectangle, _
-        wsCadastroPedidos.Range("A1").Left + wsCadastroPedidos.Range("A1").Width + 20, _
-        wsCadastroPedidos.Range("A1").Top, 75, 15)
+    Dim celulaBase As Range
+    Set celulaBase = wsCadastroPedidos.Range("A1")
+    
+    wsCadastroPedidos.Activate
+    wsCadastroPedidos.Unprotect password:="nexttsol"
+    
+    Set limparBtnPedidos = wsCadastroPedidos.Shapes.AddShape( _
+        Type:=msoShapeRoundedRectangle, _
+        Left:=celulaBase.Left + 125, _
+        Top:=celulaBase.Top, _
+        Width:=80, _
+        Height:=20)
 
-    ' Configurar o botão
     With limparBtnPedidos
         .Name = "limparValoresBtnPedidos"
         .TextFrame2.TextRange.Text = "Limpar Valores"
-        .Fill.ForeColor.RGB = RGB(180, 198, 231) ' Mesmo estilo do botão anterior
+        .Fill.ForeColor.RGB = RGB(180, 198, 231)
+        .line.Visible = msoFalse
 
-        ' Configurar fonte do botão
         With .TextFrame2.TextRange
             .Font.Size = 7
             .Font.Name = "Arial"
@@ -122,13 +154,12 @@ Sub CriarShapeBotaoCadastroPedidos()
             .Font.Fill.ForeColor.RGB = RGB(61, 61, 61)
         End With
 
-        ' Alinhar o texto verticalmente e no centro
         .TextFrame2.VerticalAnchor = msoAnchorMiddle
         .TextFrame2.TextRange.ParagraphFormat.Alignment = msoAlignCenter
 
-        ' Associar a macro ao botão
         .OnAction = "ConfirmarLimpezaCadastroPedidos"
     End With
+    ws.Protect password:="nexttsol", UserInterfaceOnly:=True, DrawingObjects:=False
 End Sub
 
 Sub ConfirmarLimpezaCadastroPedidos()
