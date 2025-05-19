@@ -20,11 +20,11 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Application.Calculation = xlCalculationManual
     
     ' --- Primeiro processa as cores dinâmicas ---
-    If Not Intersect(Target, Me.Range("R7:U1007")) Is Nothing Then
-        If Target.CountLarge = 1 Then
-            Call AplicarCoresDinamicas(Target)
-        End If
-        Application.EnableEvents = False
+    'If Not Intersect(Target, Me.Range("R7:U1007")) Is Nothing Then
+        'If Target.CountLarge = 1 Then
+            'Call AplicarCoresDinamicas(Target)
+        'End If
+        'Application.EnableEvents = False
         ' Verifica colunas R a U (18 a 21)
         'Dim i As Long
         'For i = 18 To 21
@@ -44,10 +44,10 @@ Private Sub Worksheet_Change(ByVal Target As Range)
             ' Coluna de apoio correspondente: V (22) a Y (25)
             'Me.Columns(i + 4).Hidden = Not existeValor
         'Next i
-        Application.EnableEvents = True
+        'Application.EnableEvents = True
         
-        GoTo Finalizar
-    End If
+        'GoTo Finalizar
+    'End If
     
     ' --- Restante do código original ---
     Dim cRange As Range, fRange As Range, bcRange As Range, bRange As Range
