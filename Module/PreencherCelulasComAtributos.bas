@@ -88,7 +88,7 @@ Sub PreencherCelulasComAtributos()
     End If
 
     If qtdValores > 0 Then
-        colunaInicial = 26
+        colunaInicial = 56
         ultimaColuna = colunaInicial + qtdValores - 1
         
         espacoSuficiente = False

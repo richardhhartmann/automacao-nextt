@@ -29,7 +29,7 @@ Sub GerarFormulaDinamica()
         condicao = condicao & ");""OK"";""n/a"")"
         formulaGerada = "=" & condicao
 
-        With ws.Cells(linha, 63)
+        With ws.Cells(linha, 200)
             If .HasFormula Then
                 If .FormulaLocal <> formulaGerada Then
                     .FormulaLocal = formulaGerada

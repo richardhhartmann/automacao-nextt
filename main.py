@@ -307,8 +307,9 @@ def importar():
                 cadastrar_produto(caminho_excel)
                 cadastrar_pedido(caminho_excel)
             
-        finally:
-            loading_window.after(0, fechar_janela_carregamento)
+        except Exception as e:
+            print(f"Erro ao executar os cadastros: {e}")
+            
 
     threading.Thread(target=executar_cadastro, daemon=True).start()
 

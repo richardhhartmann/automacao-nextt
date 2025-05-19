@@ -28,7 +28,7 @@ def debug_log(message):
 def get_db_connection(file_name='conexao_temp.txt'):
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(script_dir, file_name)
+        file_path = os.path.join(file_name)
         
         with open(file_path, 'r') as f:
             config = json.load(f)
@@ -99,7 +99,7 @@ def trata_valor(valor, tipo=int):
         return None
 
 def processa_produto(ws, linha_excel, df, x):
-    if df.iloc[x, 62] != "OK":
+    if df.iloc[x, 199] != "OK":
         return None
 
     secao = trata_valor(df.iloc[x, 54])

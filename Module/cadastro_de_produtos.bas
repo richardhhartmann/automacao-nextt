@@ -19,45 +19,71 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Application.ScreenUpdating = False
     Application.Calculation = xlCalculationManual
     
-    ' --- Primeiro processa as cores dinâmicas ---
-    'If Not Intersect(Target, Me.Range("R7:U1007")) Is Nothing Then
-        'If Target.CountLarge = 1 Then
-            'Call AplicarCoresDinamicas(Target)
-        'End If
-        'Application.EnableEvents = False
-        ' Verifica colunas R a U (18 a 21)
-        'Dim i As Long
-        'For i = 18 To 21
-            'Dim colEntrada As Range, celula As Range
-            'Dim existeValor As Boolean
-    
-            'Set colEntrada = Me.Range(Me.Cells(7, i), Me.Cells(1007, i))
-            'existeValor = False
-    
-            'For Each celula In colEntrada
-                'If Trim(celula.Value) <> "" Then
-                    'existeValor = True
-                    'Exit For
-                'End If
-            'Next celula
-    
-            ' Coluna de apoio correspondente: V (22) a Y (25)
-            'Me.Columns(i + 4).Hidden = Not existeValor
-        'Next i
-        'Application.EnableEvents = True
-        
-        'GoTo Finalizar
-    'End If
+    ' --- Lógica dinâmica para colunas U (21) até AJ (36) ---
+    For col = 21 To 35 ' AJ = 36, último analisado é 35
+        Set intervalo = Intersect(Target, Me.Range(Me.Cells(7, col), Me.Cells(1007, col)))
+        If Not intervalo Is Nothing Then
+            ' Verifica se coluna atual está completamente vazia
+            existeValor = False
+            For Each celula In Me.Range(Me.Cells(7, col), Me.Cells(1007, col))
+                If Trim(celula.Value) <> "" Then
+                    existeValor = True
+                    Exit For
+                End If
+            Next celula
+
+            nextCol = col + 1
+            If nextCol <= 36 Then
+                If existeValor Then
+                    Me.Columns(nextCol).Hidden = False
+                Else
+                    ' Se não tiver valor, oculta a próxima coluna
+                    Me.Columns(nextCol).Hidden = True
+                    ' Também oculta todas após ela para evitar "vazamentos"
+                    Dim j As Long
+                    For j = nextCol + 1 To 36
+                        Me.Columns(j).Hidden = True
+                    Next j
+                End If
+            End If
+        End If
+    Next col
+
+    ' --- Lógica dinâmica para colunas AN (40) até BC (55) - ATUALIZADO PARA CG ---
+    For col = 40 To 54 ' CG = 55 (antigo BC)
+        Set intervalo = Intersect(Target, Me.Range(Me.Cells(7, col), Me.Cells(1007, col)))
+        If Not intervalo Is Nothing Then
+            existeValor = False
+            For Each celula In Me.Range(Me.Cells(7, col), Me.Cells(1007, col))
+                If Trim(celula.Value) <> "" Then
+                    existeValor = True
+                    Exit For
+                End If
+            Next celula
+
+            nextCol = col + 1
+            If nextCol <= 55 Then
+                If existeValor Then
+                    Me.Columns(nextCol).Hidden = False
+                Else
+                    Me.Columns(nextCol).Hidden = True
+                    For j = nextCol + 1 To 55
+                        Me.Columns(j).Hidden = True
+                    Next j
+                End If
+            End If
+        End If
+    Next col
     
     ' --- Restante do código original ---
-    Dim cRange As Range, fRange As Range, bcRange As Range, bRange As Range
+    Dim cRange As Range, fRange As Range, cgRange As Range, bRange As Range
     Dim intersecaoAteBB As Range
     Dim deveSalvar As Boolean
     Dim wsDados As Worksheet
     
     Set cRange = Intersect(Target, Me.Range("C7:C1007"))
     Set fRange = Intersect(Target, Me.Range("F8:F1007"))
-    Set bcRange = Intersect(Target, Me.Range("BC7:BC1007"))
+    Set cgRange = Intersect(Target, Me.Range("CG7:CG1007")) ' Antigo BC
     Set bRange = Intersect(Target, Me.Range("A7:A1007"))
     Set intersecaoAteBB = Intersect(Target, Me.Range("A7:BB1007"))
     
@@ -139,17 +165,17 @@ Private Sub Worksheet_Change(ByVal Target As Range)
 
 
 Continuar:
-    ' --- Código para validação dinâmica ---
-    If Not bcRange Is Nothing Or Not bRange Is Nothing Then
+    ' --- Código para validação dinâmica - ATUALIZADO PARA CG ---
+    If Not cgRange Is Nothing Or Not bRange Is Nothing Then
         On Error Resume Next
         Me.Unprotect "nexttsol"
         On Error GoTo 0
         
         Dim valRange As Range
-        If Not bcRange Is Nothing And Not bRange Is Nothing Then
-            Set valRange = Union(bcRange, bRange)
-        ElseIf Not bcRange Is Nothing Then
-            Set valRange = bcRange
+        If Not cgRange Is Nothing And Not bRange Is Nothing Then
+            Set valRange = Union(cgRange, bRange)
+        ElseIf Not cgRange Is Nothing Then
+            Set valRange = cgRange
         ElseIf Not bRange Is Nothing Then
             Set valRange = bRange
         End If
@@ -159,7 +185,7 @@ Continuar:
             For Each valCell In valRange
                 If Not IsEmpty(valCell.Value) Then
                     AplicarValidacaoDinamica Me, valCell.Row
-                ElseIf Not bcRange Is Nothing And IsInRange(valCell, bcRange) Then
+                ElseIf Not cgRange Is Nothing And IsInRange(valCell, cgRange) Then
                     Me.Range("B" & valCell.Row).Validation.Delete
                 End If
             Next valCell
@@ -198,7 +224,7 @@ Continuar:
         End If
     End If
 
-    ' --- Código para verificar valores duplicados ---
+    ' --- Código para verificar valores duplicados - ATUALIZADO PARA CG/CH ---
     If Not Intersect(Target, Me.Range("F7:F1007")) Is Nothing Then
         Dim fCelula As Range
         Dim dadosArray As Variant
@@ -216,8 +242,8 @@ Continuar:
                     matchFound = False
                     
                     Dim currentSecao As String, currentEspecie As String, currentRef As String
-                    currentSecao = Trim(CStr(Me.Range("BC" & fCelula.Row).Value))
-                    currentEspecie = Trim(CStr(Me.Range("BD" & fCelula.Row).Value))
+                    currentSecao = Trim(CStr(Me.Range("CG" & fCelula.Row).Value)) ' Antigo BC
+                    currentEspecie = Trim(CStr(Me.Range("CH" & fCelula.Row).Value)) ' Antigo BD
                     currentRef = Trim(CStr(fCelula.Value))
                     
                     For i = 1 To UBound(dadosArray, 1)
@@ -437,7 +463,8 @@ Private Sub AplicarValidacaoDinamica(ws As Worksheet, linha As Long)
     ws.Unprotect "nexttsol"
     On Error GoTo ValidacaoErro
     
-    nomeSecao = "SecaoCompleta" & ws.Range("BC" & linha).Value
+    ' ATUALIZADO para usar CG em vez de BC
+    nomeSecao = "SecaoCompleta" & ws.Range("CG" & linha).Value
     
     Set wsDados = ThisWorkbook.Worksheets("Dados Consolidados")
     If wsDados Is Nothing Then Exit Sub

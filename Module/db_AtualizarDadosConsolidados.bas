@@ -252,7 +252,7 @@ Private Sub AtualizarModelosPorAtributo(conn As Object, ws As Worksheet)
     Loop
     rs.Close
 
-    colunaAtual = 26 ' Coluna Z
+    colunaAtual = 56 ' Coluna Z
 
     For Each codigo In tpaCodigos.Keys
         rs.Open "SELECT mat_descricao FROM tb_modelo_atributo " & _

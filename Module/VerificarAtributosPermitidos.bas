@@ -65,7 +65,7 @@ Sub AtualizarSecaoEspecie(Optional linhaUnica As Variant)
 
         If secao = "" Or especie = "" Then
 LimparAtributos:
-            For col = 26 To 43
+            For col = 56 To 199
                 ws.Cells(linha, col).Interior.Color = RGB(217, 217, 217)
                 ws.Cells(linha, col).ClearContents
                 ws.Cells(linha, col).Locked = True
@@ -76,8 +76,8 @@ LimparAtributos:
             GoTo ProximaLinha
         End If
         
-        For col = 26 To ws.Cells(linha, Columns.Count).End(xlToLeft).Column
-            If col > 43 Then Exit For
+        For col = 56 To ws.Cells(linha, Columns.Count).End(xlToLeft).Column
+            If col > 199 Then Exit For
             
             tpa_codigo = ""
             ultimaLinhaDados = wsDados.Cells(Rows.Count, col).End(xlUp).Row

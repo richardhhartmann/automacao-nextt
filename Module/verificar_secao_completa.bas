@@ -18,7 +18,8 @@ Sub VerificarSecaoCompleta()
         End If
         
         valorProcurado = Trim(CStr(cel.Value))
-        nomeLista = "SecaoCompleta" & Trim(CStr(ws.Range("BC" & cel.Row).Value))
+        ' ATUALIZADO: BC para CG
+        nomeLista = "SecaoCompleta" & Trim(CStr(ws.Range("CG" & cel.Row).Value))
 
         Set listaNomes = Nothing
         On Error Resume Next
@@ -113,7 +114,8 @@ Sub ValidarEspecies()
         End If
 
         valorProcurado = Trim(CStr(cel.Value))
-        grupoSecao = "SecaoCompleta" & Trim(CStr(ws.Range("BC" & cel.Row).Value))
+        ' ATUALIZADO: BC para CG
+        grupoSecao = "SecaoCompleta" & Trim(CStr(ws.Range("CG" & cel.Row).Value))
         encontrado = False
         
         On Error Resume Next
