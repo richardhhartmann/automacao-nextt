@@ -5,6 +5,7 @@ Dim rng As Range
 Dim valorAnterior As Variant
 Dim corFundoAnterior As Variant
 Dim ws As Worksheet
+Private Const INTERVALO_CORES As String = "R7:AJ1007"
 
 Private Sub Worksheet_SelectionChange(ByVal Target As Range)
     If Not Intersect(Target, Me.Range("C7:D1007,G7:G1007")) Is Nothing And Target.Cells.Count = 1 Then
@@ -74,6 +75,16 @@ Private Sub Worksheet_Change(ByVal Target As Range)
             End If
         End If
     Next col
+
+    ' --- Verifica se a alteração foi no intervalo de cores ---
+    If Not Intersect(Target, Me.Range(INTERVALO_CORES)) Is Nothing Then
+        Application.EnableEvents = False
+        Dim cel As Range
+        For Each cel In Intersect(Target, Me.Range(INTERVALO_CORES))
+            AplicarCoresDinamicas cel
+        Next cel
+        Application.EnableEvents = True
+    End If
     
     ' --- Restante do código original ---
     Dim cRange As Range, fRange As Range, cgRange As Range, bRange As Range
@@ -290,7 +301,6 @@ Private Sub AplicarCoresDinamicas(Target As Range)
     Dim corTexto As String
     Dim corHex As Long
     Dim fonteClara As Boolean
-    Dim celDestino As Range
     
     If Trim(Target.Value) = "" Then
         Target.Interior.ColorIndex = xlColorIndexNone
@@ -438,12 +448,6 @@ Private Sub AplicarCoresDinamicas(Target As Range)
     End Select
 
     With Target
-        .Interior.Color = corHex
-        .Font.Color = IIf(fonteClara, RGB(255, 255, 255), RGB(0, 0, 0))
-    End With
-
-    Set celDestino = Target.Offset(0, 4)
-    With celDestino
         .Interior.Color = corHex
         .Font.Color = IIf(fonteClara, RGB(255, 255, 255), RGB(0, 0, 0))
     End With

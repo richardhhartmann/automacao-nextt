@@ -43,7 +43,7 @@ Sub BloquearCadastroProdutos()
 
     Dim ultimaColunaComValor As Long
     Dim col As Long
-    For col = ws.Range("A3").Column To ws.Range("BB3").Column
+    For col = ws.Range("A3").Column To ws.Range("CF3").Column
         If Trim(ws.Cells(3, col).Value) <> "" Then
             ultimaColunaComValor = col
         End If
@@ -51,7 +51,7 @@ Sub BloquearCadastroProdutos()
 
     Dim inicioBloqueioColunaIndex As Long
     If ultimaColunaComValor = 0 Then
-        inicioBloqueioColunaIndex = ws.Range("BB3").Column + 1
+        inicioBloqueioColunaIndex = ws.Range("CF3").Column + 1
     Else
         inicioBloqueioColunaIndex = ultimaColunaComValor + 1
     End If

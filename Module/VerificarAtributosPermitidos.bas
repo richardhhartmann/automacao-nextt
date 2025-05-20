@@ -18,7 +18,7 @@ Sub AtualizarSecaoEspecie(Optional linhaUnica As Variant)
     Set wsDados = ThisWorkbook.Sheets("Dados Consolidados")
     
     caminho = ThisWorkbook.Path & "\conexao_temp.txt"
-    Debug.Print "Caminho do arquivo de conexao: " & caminho
+    'Debug.Print "Caminho do arquivo de conexao: " & caminho
     
     On Error GoTo ErroArquivo
     txt = CreateObject("Scripting.FileSystemObject").OpenTextFile(caminho).ReadAll
@@ -56,16 +56,20 @@ Sub AtualizarSecaoEspecie(Optional linhaUnica As Variant)
 
     For linha = linhaInicial To linhaFinal
         
-        If IsError(ws.Range("BC" & linha).Value) Or IsError(ws.Range("BD" & linha).Value) Then
+        If IsError(ws.Range("CG" & linha).Value) Or IsError(ws.Range("CH" & linha).Value) Then
             GoTo LimparAtributos
         End If
         
-        secao = CStr(ws.Range("BC" & linha).Value)
-        especie = CStr(ws.Range("BD" & linha).Value)
+        secao = CStr(ws.Range("CG" & linha).Value)
+        especie = CStr(ws.Range("CH" & linha).Value)
 
         If secao = "" Or especie = "" Then
 LimparAtributos:
-            For col = 56 To 199
+            Dim ultimaColComDados As Long
+            ultimaColComDados = wsDados.Cells(5, Columns.Count).End(xlToLeft).Column
+            If ultimaColComDados > 84 Then ultimaColComDados = 84
+
+            For col = 56 To ultimaColComDados
                 ws.Cells(linha, col).Interior.Color = RGB(217, 217, 217)
                 ws.Cells(linha, col).ClearContents
                 ws.Cells(linha, col).Locked = True
@@ -77,7 +81,7 @@ LimparAtributos:
         End If
         
         For col = 56 To ws.Cells(linha, Columns.Count).End(xlToLeft).Column
-            If col > 199 Then Exit For
+            If col > 84 Then Exit For
             
             tpa_codigo = ""
             ultimaLinhaDados = wsDados.Cells(Rows.Count, col).End(xlUp).Row
@@ -103,7 +107,16 @@ LimparAtributos:
             
             Set rs = conn.Execute(sql)
             
-            dictPermissoes.Add Key:=linha & "|" & col, item:=Not rs.EOF
+            dictPermissoes.Add key:=linha & "|" & col, item:=Not rs.EOF
+            
+            If Not rs.EOF Then
+                Debug.Print "Registro encontrado:"
+                Debug.Print "sec_codigo: " & rs.Fields("sec_codigo").Value
+                Debug.Print "esp_codigo: " & rs.Fields("esp_codigo").Value
+                Debug.Print "tpa_codigo: " & rs.Fields("tpa_codigo").Value
+            Else
+                Debug.Print "NENHUM registro encontrado para esta combinação"
+            End If
             
             If rs.EOF Then
                 ws.Cells(linha, col).Interior.Color = RGB(217, 217, 217)
@@ -184,7 +197,7 @@ ProximaColuna:
         Next col
         
 ProximaLinha:
-    Next linha  
+    Next linha
     conn.Close
     Set conn = Nothing
     Application.ScreenUpdating = True
@@ -231,4 +244,3 @@ TratarErroJson:
     Debug.Print "ERRO AO PARSEAR JSON: " & Err.Description
     Set ParseJson = Nothing
 End Function
-
