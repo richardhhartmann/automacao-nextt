@@ -7,16 +7,18 @@ import sys
 import openpyxl
 import time
 import re
+import warnings
 from tkinter import filedialog
 from datetime import datetime
 from openpyxl.utils import get_column_letter, column_index_from_string
 from contextlib import contextmanager
 
+warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
+
 BATCH_SIZE = 100
 LINHA_CABECALHO = 3
-COLUNA_INICIAL_ADICIONAIS = 'Z'
+COLUNA_INICIAL_ADICIONAIS = 'BD'
 COLUNA_INICIAL_ADICIONAIS_PEDIDO = 'AN'
-COLUNAS_VARIACOES = [('R', 'V'), ('S', 'W'), ('T', 'X'), ('U', 'Y')]
 DEBUG = True
 CODIGOS = 10
 
@@ -65,8 +67,9 @@ def get_db_connection(file_name='conexao_temp.txt'):
 def get_colunas_adicionais(ws, linha_cabecalho=LINHA_CABECALHO, coluna_inicial=COLUNA_INICIAL_ADICIONAIS):
     colunas = []
     current_col_idx = column_index_from_string(coluna_inicial)
-
-    while True:
+    limite_col_idx = column_index_from_string('CF') 
+    
+    while current_col_idx <= limite_col_idx:
         col_letter = get_column_letter(current_col_idx)
         valor = ws[f'{col_letter}{linha_cabecalho}'].value
         if pd.isna(valor) or not valor:
@@ -102,16 +105,16 @@ def processa_produto(ws, linha_excel, df, x):
     if df.iloc[x, 199] != "OK":
         return None
 
-    secao = trata_valor(df.iloc[x, 54])
-    especie = trata_valor(df.iloc[x, 55])
+    secao = trata_valor(df.iloc[x, 84]) #
+    especie = trata_valor(df.iloc[x, 85]) #
     descricao = str(df.iloc[x, 2])[:50] if pd.notna(df.iloc[x, 2]) else None
     descricao_reduzida = str(df.iloc[x, 3])[:50] if pd.notna(df.iloc[x, 3]) else None
-    marca = trata_valor(df.iloc[x, 56])
-    comprador = trata_valor(df.iloc[x, 57])
-    und_codigo = trata_valor(df.iloc[x, 58])
-    classificacao = trata_valor(df.iloc[x, 59])
-    origem = trata_valor(df.iloc[x, 60])
-    etiqueta = trata_valor(df.iloc[x, 61])
+    marca = trata_valor(df.iloc[x, 86]) #
+    comprador = trata_valor(df.iloc[x, 87]) #
+    und_codigo = trata_valor(df.iloc[x, 88]) #
+    classificacao = trata_valor(df.iloc[x, 89]) #
+    origem = trata_valor(df.iloc[x, 90]) #
+    etiqueta = trata_valor(df.iloc[x, 91]) #
 
     referencia = (str(int(df.iloc[x, 5])) if isinstance(df.iloc[x, 5], float) and df.iloc[x, 5].is_integer() else str(df.iloc[x, 5])) if pd.notna(df.iloc[x, 5]) else None
     cod_original = str(df.iloc[x, 6]) if pd.notna(df.iloc[x, 6]) else ''
@@ -124,6 +127,7 @@ def processa_produto(ws, linha_excel, df, x):
     
     data = datetime.now()
     
+    # Atributos adicionais (mantido da versão anterior)
     atributos_adicionais = []
     colunas_adicionais = get_colunas_adicionais(ws)
     
@@ -132,31 +136,56 @@ def processa_produto(ws, linha_excel, df, x):
         if pd.notna(valor):
             atributos_adicionais.append((secao, especie, None, idx, str(valor), None))
 
-    cores = set()
-    for col_cor, _ in COLUNAS_VARIACOES:
-        cor = ws[f'{col_cor}{linha_excel}'].value
-        if pd.notna(cor):
-            cores.add(str(cor))
+    # Nova lógica para cores e tamanhos
+    cores = []
+    tamanhos = []
     
-    tamanhos = set()
-    for _, col_tamanho in COLUNAS_VARIACOES:
-        tamanho = ws[f'{col_tamanho}{linha_excel}'].value
-        if pd.notna(tamanho):
-            tamanhos.add(str(tamanho))
+    # Coleta de cores (colunas R a Z)
+    for col_letra in ['R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 
+                     'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ']:
+        valor = ws[f'{col_letra}{linha_excel}'].value
+        if pd.notna(valor) and str(valor).strip() != '':
+            cores.append(str(valor).strip())
+    
+    # Coleta de tamanhos (colunas AK a BC)
+    for col_letra in ['AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 
+                     'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ', 'BA', 'BB', 'BC']:
+        valor = ws[f'{col_letra}{linha_excel}'].value
+        if pd.notna(valor) and str(valor).strip() != '':
+            tamanhos.append(str(valor).strip())
     
     variacoes = []
     ipr_codigo = 1
     
-    for cor in sorted(cores):
-        for tamanho in sorted(tamanhos):
+    if cores and tamanhos:
+        for cor in cores:
+            for tamanho in tamanhos:
+                variacoes.append({
+                    'ipr_codigo': ipr_codigo,
+                    'ipr_codigo_barra': ipr_codigo_barra,
+                    'cor': cor,
+                    'tamanho': tamanho
+                })
+                ipr_codigo += 1
+    elif cores:
+        for cor in cores:
             variacoes.append({
                 'ipr_codigo': ipr_codigo,
                 'ipr_codigo_barra': ipr_codigo_barra,
                 'cor': cor,
+                'tamanho': None
+            })
+            ipr_codigo += 1
+    elif tamanhos:
+        for tamanho in tamanhos:
+            variacoes.append({
+                'ipr_codigo': ipr_codigo,
+                'ipr_codigo_barra': ipr_codigo_barra,
+                'cor': None,
                 'tamanho': tamanho
             })
             ipr_codigo += 1
-
+    
     return {
         'secao': secao,
         'especie': especie,
@@ -308,6 +337,11 @@ def cadastrar_produto(excel):
                     produto['etiqueta'], None, None, None, 1, None, None, None, None, None
                 )
                 
+                print("\nDados processados:")
+                pd.set_option('display.max_columns', None)
+                pd.set_option('display.max_colwidth', None)
+                print(df)
+
                 cursor.execute("""
                     INSERT INTO tb_produto
                     (sec_codigo, esp_codigo, prd_codigo, prd_descricao, prd_descricao_reduzida,
@@ -371,20 +405,23 @@ def cadastrar_produto(excel):
                             VALUES (?, ?, ?, ?, ?, 0)
                         """, produto['secao'], produto['especie'], prd_codigo, variacao['ipr_codigo'], variacao['ipr_codigo_barra'])
 
+                    if variacao['cor']:
+                        cursor.execute("""
+                            INSERT INTO tb_atributo_item_produto 
+                            (sec_codigo, esp_codigo, prd_codigo, ipr_codigo,
+                            tpa_codigo, aip_descricao, aip_ordem, aip_descricao_fornec)
+                            VALUES (?, ?, ?, ?, 1, ?, ?, NULL)
+                        """, produto['secao'], produto['especie'], prd_codigo, variacao['ipr_codigo'], 
+                            variacao['cor'], variacao['ipr_codigo'])
                     
-                    cursor.execute("""
-                        INSERT INTO tb_atributo_item_produto 
-                        (sec_codigo, esp_codigo, prd_codigo, ipr_codigo,
-                        tpa_codigo, aip_descricao, aip_ordem, aip_descricao_fornec)
-                        VALUES (?, ?, ?, ?, 1, ?, ?, NULL)
-                    """, produto['secao'], produto['especie'], prd_codigo, variacao['ipr_codigo'], variacao['cor'], variacao['ipr_codigo'])
-                    
-                    cursor.execute("""
-                        INSERT INTO tb_atributo_item_produto 
-                        (sec_codigo, esp_codigo, prd_codigo, ipr_codigo,
-                        tpa_codigo, aip_descricao, aip_ordem, aip_descricao_fornec)
-                        VALUES (?, ?, ?, ?, 2, ?, ?, NULL)
-                    """, produto['secao'], produto['especie'], prd_codigo, variacao['ipr_codigo'], variacao['tamanho'], variacao['ipr_codigo'])
+                    if variacao['tamanho']:
+                        cursor.execute("""
+                            INSERT INTO tb_atributo_item_produto 
+                            (sec_codigo, esp_codigo, prd_codigo, ipr_codigo,
+                            tpa_codigo, aip_descricao, aip_ordem, aip_descricao_fornec)
+                            VALUES (?, ?, ?, ?, 2, ?, ?, NULL)
+                        """, produto['secao'], produto['especie'], prd_codigo, variacao['ipr_codigo'], 
+                            variacao['tamanho'], variacao['ipr_codigo'])
                     
                     variacoes_inseridas += 1
                 
@@ -488,8 +525,11 @@ def cadastrar_pedido(excel):
             pedidos.append(pedido)
 
         debug_log(f"Total de pedidos válidos processados: {len(pedidos)}")
-        print("\nDados processados:")
-        print(df.head())
+        
+        """print("\nDados processados:")
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.max_colwidth', None)
+        print(df)"""
         
         with get_db_connection('conexao_temp.txt') as (conn, cursor):
             try:

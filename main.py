@@ -8,6 +8,7 @@ import os
 import pyodbc
 import shutil
 from tkinter import font, Toplevel, ttk, filedialog
+from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageTk
 from Auto.db_connection import preencher_planilha
 from Auto.db_module import importar_modulo_vba
@@ -18,6 +19,7 @@ cancelar_evento = threading.Event()
 VERSAO = '1.0'
 arquivo_excel_selecionado = None
 nome_empresa = ""
+DEBUG = True
 
 def cancelar_processamento():
     global cancelar_evento
@@ -258,9 +260,11 @@ import threading
 from tkinter import Tk, filedialog
 
 def importar():
+    """Função principal para importação de dados, otimizada e com melhor tratamento de erros."""
     if not validar_campos():
         return
 
+    # 1. Preparação dos dados de conexão (mais eficiente)
     dados_conexao = {
         "driver": driver_mais_recente,
         "server": entry_server.get().strip(),
@@ -270,48 +274,99 @@ def importar():
         "trusted_connection": "yes" if var_trusted_connection.get() else "no"
     }
 
-    with open(caminho_parametros, 'w') as f:
-            json.dump(dados_conexao, f, indent=4) 
+    # 2. Salvar parâmetros de conexão de forma segura
+    try:
+        with open(caminho_parametros, 'w') as f:
+            json.dump(dados_conexao, f, indent=4)
+    except IOError as e:
+        print(f"Erro ao salvar parâmetros de conexão: {e}")
+        return
 
+    # 3. Função interna otimizada para execução do cadastro
     def executar_cadastro():
         try:
+            # Verificação rápida de cancelamento
             if cancelar_evento.is_set():
-                print("Operação cancelada antes do início.")
+                print("Operação cancelada pelo usuário.")
                 return
                 
-            root = Tk()
-            root.withdraw()
-            root.attributes('-topmost', True) 
-            
-            caminho_excel = filedialog.askopenfilename(
-                title="Selecione a planilha Excel",
-                filetypes=[("Arquivos Excel", "*.xlsx *.xls *.xlsm"), ("Todos os arquivos", "*.*")]
-            )
-            
+            # 4. Seleção de arquivo mais eficiente
+            caminho_excel = obter_caminho_excel()
             if not caminho_excel:
-                print("Nenhum arquivo selecionado.")
                 return
             
-            global arquivo_excel_selecionado
-            arquivo_excel_selecionado = caminho_excel
-            
-            print(f"Arquivo selecionado: {caminho_excel}")
-            
-            wb = openpyxl.load_workbook(caminho_excel, data_only=True)
-
-            if "Cadastro de Produtos" not in wb.sheetnames or "Cadastro de Pedidos" not in wb.sheetnames:
-                importacao_dados(caminho_excel)
-                exportar_conexao()
-            else:
-                print("Iniciando cadastros")
-                cadastrar_produto(caminho_excel)
-                cadastrar_pedido(caminho_excel)
+            # 5. Processamento otimizado do arquivo
+            processar_arquivo_excel(caminho_excel)
             
         except Exception as e:
-            print(f"Erro ao executar os cadastros: {e}")
-            
+            print(f"Erro durante a execução: {str(e)}")
+            if DEBUG:
+                import traceback
+                traceback.print_exc()
 
-    threading.Thread(target=executar_cadastro, daemon=True).start()
+    # 6. Iniciar thread com tratamento de exceções
+    iniciar_thread_segura(executar_cadastro)
+
+# Funções auxiliares para modularização
+def obter_caminho_excel():
+    """Obtém o caminho do arquivo Excel de forma otimizada."""
+    root = Tk()
+    root.withdraw()
+    root.attributes('-topmost', True)
+    
+    try:
+        caminho = filedialog.askopenfilename(
+            title="Selecione a planilha Excel",
+            filetypes=[("Excel files", "*.xlsx *.xls *.xlsm"), ("All files", "*.*")],
+            initialdir=os.path.expanduser("~")  # Começa no diretório do usuário
+        )
+        return caminho if caminho else None
+    finally:
+        root.destroy()  # Libera recursos imediatamente
+
+def processar_arquivo_excel(caminho_excel):
+    """Processa o arquivo Excel de forma otimizada."""
+    global arquivo_excel_selecionado
+    arquivo_excel_selecionado = caminho_excel
+    print(f"Processando arquivo: {os.path.basename(caminho_excel)}")
+    
+    try:
+        # Verificação rápida de planilhas necessárias
+        wb = openpyxl.load_workbook(caminho_excel, data_only=True, read_only=True)
+        planilhas = set(wb.sheetnames)
+        wb.close()
+        
+        if not {"Cadastro de Produtos", "Cadastro de Pedidos"}.issubset(planilhas):
+            print("Planilhas necessárias não encontradas, executando importação básica...")
+            importacao_dados(caminho_excel)
+            exportar_conexao()
+        else:
+            """print("Cadastrando produtos...")
+            cadastrar_produto(caminho_excel)
+            print("Cadastrando pedidos...")
+            cadastrar_pedido(caminho_excel)"""
+            print("Iniciando cadastros...")
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                print("Cadastrando produtos...")
+                executor.submit(cadastrar_produto, caminho_excel)
+                print("Cadastrando pedidos...")
+                executor.submit(cadastrar_pedido, caminho_excel)
+                
+    except Exception as e:
+        print(f"Erro ao processar arquivo Excel: {e}")
+        raise
+
+def iniciar_thread_segura(target):
+    """Inicia uma thread com tratamento seguro de exceções."""
+    def thread_com_excecao():
+        try:
+            target()
+        except Exception as e:
+            print(f"Erro não tratado na thread: {e}")
+    
+    thread = threading.Thread(target=thread_com_excecao, daemon=True)
+    thread.start()
+    return thread
 
 def preencher_campos_com_parametros_salvos():
     if not os.path.exists(caminho_parametros):
