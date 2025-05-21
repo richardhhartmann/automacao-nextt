@@ -131,7 +131,7 @@ def processa_produto(ws, linha_excel, df, x):
     atributos_adicionais = []
     colunas_adicionais = get_colunas_adicionais(ws)
     
-    for idx, col in enumerate(colunas_adicionais, start=3):
+    for idx, col in enumerate(colunas_adicionais, start=5):
         valor = ws[f'{col}{linha_excel}'].value
         if pd.notna(valor):
             atributos_adicionais.append((secao, especie, None, idx, str(valor), None))
@@ -337,10 +337,10 @@ def cadastrar_produto(excel):
                     produto['etiqueta'], None, None, None, 1, None, None, None, None, None
                 )
                 
-                print("\nDados processados:")
+                """print("\nDados processados:")
                 pd.set_option('display.max_columns', None)
                 pd.set_option('display.max_colwidth', None)
-                print(df)
+                print(df)"""
 
                 cursor.execute("""
                     INSERT INTO tb_produto
@@ -391,6 +391,8 @@ def cadastrar_produto(excel):
                 
                 has_ipr_gtin = cursor.fetchone()[0] > 0
 
+                cor_anterior = None
+
                 for variacao in produto['variacoes']:
                     if has_ipr_gtin:
                         cursor.execute("""
@@ -405,7 +407,8 @@ def cadastrar_produto(excel):
                             VALUES (?, ?, ?, ?, ?, 0)
                         """, produto['secao'], produto['especie'], prd_codigo, variacao['ipr_codigo'], variacao['ipr_codigo_barra'])
 
-                    if variacao['cor']:
+                    # Inserir cor apenas quando for diferente da anterior
+                    if variacao['cor'] and variacao['cor'] != cor_anterior:
                         cursor.execute("""
                             INSERT INTO tb_atributo_item_produto 
                             (sec_codigo, esp_codigo, prd_codigo, ipr_codigo,
@@ -413,7 +416,9 @@ def cadastrar_produto(excel):
                             VALUES (?, ?, ?, ?, 1, ?, ?, NULL)
                         """, produto['secao'], produto['especie'], prd_codigo, variacao['ipr_codigo'], 
                             variacao['cor'], variacao['ipr_codigo'])
+                        cor_anterior = variacao['cor']
                     
+                    # Sempre inserir o tamanho
                     if variacao['tamanho']:
                         cursor.execute("""
                             INSERT INTO tb_atributo_item_produto 
